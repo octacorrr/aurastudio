@@ -1,0 +1,1029 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AuraStudio 3D - Suite de Audio, Ecualizador y Visualización WebGL</title>
+  <meta name="description" content="Suite profesional de audio interactiva en WebGL con efectos Bloom, ecualizador paramétrico, rack de efectos (reverb, delay, distorsión) y visualizador 3D multi-forma.">
+  <style>
+    :root {
+      --primary: #00ffff;
+      --primary-glow: rgba(0, 255, 255, 0.45);
+      --secondary: #ff007f;
+      --bg-dark: #02040a;
+      --panel-bg: rgba(6, 12, 26, 0.82);
+      --card-bg: rgba(10, 20, 42, 0.65);
+      --text: #e2f4ff;
+      --text-dim: #7da5c2;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+    body {
+      background: var(--bg-dark);
+      color: var(--text);
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      overflow: hidden;
+      width: 100vw;
+      height: 100vh;
+    }
+    #canvas-container {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+    }
+
+    /* Banner Superior Google AdSense */
+    .ad-top-banner {
+      position: fixed;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 728px;
+      max-width: 92vw;
+      height: 70px;
+      background: rgba(8, 16, 36, 0.6);
+      border: 1px dashed rgba(0, 255, 255, 0.3);
+      border-radius: 10px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 40;
+      color: rgba(255, 255, 255, 0.55);
+      font-size: 11px;
+      letter-spacing: 1px;
+      backdrop-filter: blur(8px);
+      transition: opacity 0.3s;
+    }
+
+    /* Barra de Navegación de Pestañas / Módulos */
+    #nav-tabs {
+      position: fixed;
+      top: 90px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      background: rgba(6, 14, 30, 0.85);
+      border: 1px solid rgba(0, 255, 255, 0.3);
+      border-radius: 30px;
+      padding: 4px;
+      z-index: 50;
+      backdrop-filter: blur(12px);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+    }
+    .tab-btn {
+      padding: 8px 18px;
+      border: none;
+      background: transparent;
+      color: var(--text-dim);
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      border-radius: 20px;
+      transition: all 0.25s ease;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .tab-btn:hover {
+      color: var(--primary);
+    }
+    .tab-btn.active {
+      background: var(--primary);
+      color: #000;
+      box-shadow: 0 0 14px var(--primary);
+    }
+
+    /* Panel Flotante Lateral */
+    #sidebar-panel {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      width: 340px;
+      max-height: calc(100vh - 40px);
+      background: var(--panel-bg);
+      backdrop-filter: blur(16px);
+      border: 1px solid rgba(0, 255, 255, 0.25);
+      border-radius: 18px;
+      padding: 20px;
+      z-index: 100;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.7), 0 0 25px var(--primary-glow);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s;
+    }
+    #sidebar-panel.collapsed {
+      transform: translateX(-380px);
+      opacity: 0;
+      pointer-events: none;
+    }
+    #toggle-panel-btn {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      width: 44px;
+      height: 44px;
+      background: var(--panel-bg);
+      border: 1px solid var(--primary);
+      border-radius: 12px;
+      color: var(--primary);
+      font-size: 22px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      z-index: 90;
+      box-shadow: 0 0 15px var(--primary-glow);
+      backdrop-filter: blur(10px);
+    }
+
+    .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(0, 255, 255, 0.2);
+      padding-bottom: 10px;
+    }
+    .panel-header h1 {
+      font-size: 18px;
+      color: var(--primary);
+      text-shadow: 0 0 10px var(--primary);
+    }
+    .panel-content {
+      overflow-y: auto;
+      padding-right: 4px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .panel-content::-webkit-scrollbar {
+      width: 4px;
+    }
+    .panel-content::-webkit-scrollbar-thumb {
+      background: rgba(0, 255, 255, 0.3);
+      border-radius: 2px;
+    }
+
+    /* Secciones modulares */
+    .module-view {
+      display: none;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .module-view.active {
+      display: flex;
+    }
+
+    .section-title {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1.2px;
+      color: #5bb3e0;
+      margin-bottom: 4px;
+      font-weight: 700;
+    }
+    .card {
+      background: var(--card-bg);
+      border: 1px solid rgba(0, 255, 255, 0.15);
+      border-radius: 12px;
+      padding: 12px;
+    }
+
+    /* Botones y Controles */
+    .btn-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+    button, .upload-label {
+      padding: 9px 12px;
+      background: rgba(0, 255, 255, 0.1);
+      border: 1px solid var(--primary);
+      border-radius: 8px;
+      color: #fff;
+      font-size: 11px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      text-align: center;
+      transition: all 0.2s;
+    }
+    button:hover, .upload-label:hover {
+      background: var(--primary);
+      color: #000;
+      box-shadow: 0 0 12px var(--primary);
+    }
+    button.active-btn {
+      background: var(--primary);
+      color: #000;
+    }
+    input[type="file"] {
+      display: none;
+    }
+
+    .slider-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      margin-top: 6px;
+    }
+    .slider-labels {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11px;
+      color: #a4cfea;
+    }
+    input[type="range"] {
+      width: 100%;
+      height: 5px;
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 3px;
+      outline: none;
+      -webkit-appearance: none;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 15px;
+      height: 15px;
+      border-radius: 50%;
+      background: var(--primary);
+      cursor: pointer;
+      box-shadow: 0 0 8px var(--primary);
+    }
+
+    select {
+      width: 100%;
+      padding: 8px;
+      background: rgba(3, 10, 25, 0.85);
+      border: 1px solid rgba(0, 255, 255, 0.3);
+      color: #fff;
+      border-radius: 8px;
+      outline: none;
+      font-size: 12px;
+    }
+
+    /* Barra de Estado */
+    #status-bar {
+      position: fixed;
+      bottom: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--panel-bg);
+      border: 1px solid rgba(0, 255, 255, 0.25);
+      border-radius: 20px;
+      padding: 6px 18px;
+      font-size: 12px;
+      color: var(--primary);
+      backdrop-filter: blur(10px);
+      z-index: 50;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+    }
+    .indicator-light {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #555;
+    }
+    .indicator-light.active {
+      background: #00ff77;
+      box-shadow: 0 0 8px #00ff77;
+    }
+
+    /* AdSense Placeholder Lateral */
+    .ad-sidebar-slot {
+      margin-top: 10px;
+      padding: 10px;
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px dashed rgba(255, 255, 255, 0.2);
+      border-radius: 8px;
+      text-align: center;
+      font-size: 9px;
+      color: #777;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 1. Google AdSense Top Banner -->
+  <div class="ad-top-banner">
+    <span>GOOGLE ADSENSE BANNER (728x90 / RESPONSIVE)</span>
+    <span style="font-size: 9px; opacity: 0.6; margin-top: 2px;">Espacio de monetización por impresiones y clics</span>
+  </div>
+
+  <!-- 2. Menú de Pestañas Superior -->
+  <div id="nav-tabs">
+    <button class="tab-btn active" data-tab="tab-vis">🌌 1. Visualizador 3D</button>
+    <button class="tab-btn" data-tab="tab-eq">🎚️ 2. Ecualizador (EQ)</button>
+    <button class="tab-btn" data-tab="tab-fx">🎛️ 3. Modulador & FX</button>
+  </div>
+
+  <button id="toggle-panel-btn" title="Mostrar/Ocultar Panel">☰</button>
+
+  <!-- 3. Panel Lateral con los 3 Módulos -->
+  <div id="sidebar-panel">
+    <div class="panel-header">
+      <h1>AuraStudio <span style="font-size: 11px; opacity: 0.7;">v2.0 PRO</span></h1>
+      <span style="font-size: 10px; color: var(--primary);">60 FPS</span>
+    </div>
+
+    <!-- Fuentes de Entrada Universales -->
+    <div class="card">
+      <div class="section-title">Fuente de Sonido</div>
+      <div class="btn-grid">
+        <button id="btn-mic">🎙️ Micrófono</button>
+        <label class="upload-label" for="audio-upload">📁 Subir MP3</label>
+        <input type="file" id="audio-upload" accept="audio/*">
+      </div>
+      <button id="btn-demo" style="margin-top: 8px;">⚡ Demo Synth Beat</button>
+    </div>
+
+    <div class="panel-content">
+      
+      <!-- MÓDULO 1: VISUALIZADOR 3D MULTI-FORMA -->
+      <div id="tab-vis" class="module-view active">
+        <div class="card">
+          <div class="section-title">Forma Geométrica 3D</div>
+          <select id="shape-select">
+            <option value="particles">1. Esfera de Partículas Neón</option>
+            <option value="terrain">2. Malla / Túnel de Ondas (Wireframe)</option>
+            <option value="crystal">3. Cristal Icosaedro Reactivo</option>
+            <option value="cylinder">4. Espectro Cilíndrico (Barras 3D)</option>
+          </select>
+        </div>
+
+        <div class="card">
+          <div class="section-title">Estética y Color</div>
+          <select id="palette-select">
+            <option value="cyberpunk">Cyberpunk (Cyan / Magenta)</option>
+            <option value="emerald">Matrix (Esmeralda / Neón)</option>
+            <option value="solar">Solar (Lava / Oro)</option>
+            <option value="violet">Deep Violet (Púrpura / Azul)</option>
+          </select>
+
+          <div class="slider-group">
+            <div class="slider-labels">
+              <span>Intensidad de Brillo (Bloom)</span>
+              <span id="txt-bloom">1.8</span>
+            </div>
+            <input type="range" id="slider-bloom" min="0" max="4" step="0.1" value="1.8">
+          </div>
+
+          <div class="slider-group">
+            <div class="slider-labels">
+              <span>Sensibilidad de Reacción</span>
+              <span id="txt-sens">1.5</span>
+            </div>
+            <input type="range" id="slider-sens" min="0.5" max="3.5" step="0.1" value="1.5">
+          </div>
+        </div>
+      </div>
+
+      <!-- MÓDULO 2: ECUALIZADOR PARAMÉTRICO DE 3 BANDAS -->
+      <div id="tab-eq" class="module-view">
+        <div class="card">
+          <div class="section-title">Ecualizador Multibanda en Tiempo Real</div>
+          
+          <div class="slider-group">
+            <div class="slider-labels">
+              <span>Graves / Sub-Bass (< 200 Hz)</span>
+              <span id="txt-bass">0 dB</span>
+            </div>
+            <input type="range" id="eq-bass" min="-24" max="24" step="1" value="0">
+          </div>
+
+          <div class="slider-group">
+            <div class="slider-labels">
+              <span>Medios / Voces (1.5 kHz)</span>
+              <span id="txt-mid">0 dB</span>
+            </div>
+            <input type="range" id="eq-mid" min="-24" max="24" step="1" value="0">
+          </div>
+
+          <div class="slider-group">
+            <div class="slider-labels">
+              <span>Agudos / Brillo (> 5 kHz)</span>
+              <span id="txt-treble">0 dB</span>
+            </div>
+            <input type="range" id="eq-treble" min="-24" max="24" step="1" value="0">
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="section-title">Aislador Rápido de Frecuencias</div>
+          <div class="btn-grid">
+            <button id="btn-isolate-bass">🔊 Resaltar Graves</button>
+            <button id="btn-isolate-vocals">🎤 Resaltar Voces</button>
+            <button id="btn-reset-eq" style="grid-column: span 2;">🔄 Restablecer EQ</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- MÓDULO 3: MODULADOR & RACK DE EFECTOS (FX) -->
+      <div id="tab-fx" class="module-view">
+        <div class="card">
+          <div class="section-title">Efectos Espaciales y Modulación</div>
+          
+          <div class="slider-group">
+            <div class="slider-labels">
+              <span>Reverberación de Sala (Reverb)</span>
+              <span id="txt-reverb">0%</span>
+            </div>
+            <input type="range" id="fx-reverb" min="0" max="1" step="0.05" value="0">
+          </div>
+
+          <div class="slider-group">
+            <div class="slider-labels">
+              <span>Eco Rítmico (Delay / Feedback)</span>
+              <span id="txt-delay">0%</span>
+            </div>
+            <input type="range" id="fx-delay" min="0" max="0.8" step="0.05" value="0">
+          </div>
+
+          <div class="slider-group">
+            <div class="slider-labels">
+              <span>Distorsión Armónica (Drive)</span>
+              <span id="txt-dist">0%</span>
+            </div>
+            <input type="range" id="fx-dist" min="0" max="50" step="1" value="0">
+          </div>
+
+          <div class="slider-group">
+            <div class="slider-labels">
+              <span>Velocidad de Reproducción</span>
+              <span id="txt-speed">1.0x</span>
+            </div>
+            <input type="range" id="fx-speed" min="0.5" max="2.0" step="0.1" value="1.0">
+          </div>
+        </div>
+      </div>
+
+      <!-- Espacio Lateral para AdSense -->
+      <div class="ad-sidebar-slot">
+        <span>BLOQUE PUBLICITARIO ADSENSE</span>
+        <p style="font-size: 8px; margin-top: 2px;">Formato Adaptable</p>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Barra de Estado Inferior -->
+  <div id="status-bar">
+    <div class="indicator-light" id="status-light"></div>
+    <span id="status-message">Esperando entrada de sonido...</span>
+  </div>
+
+  <div id="canvas-container"></div>
+
+  <!-- Three.js + Postprocessing Shaders -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.134/examples/js/controls/OrbitControls.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.134/examples/js/postprocessing/EffectComposer.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.134/examples/js/postprocessing/RenderPass.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.134/examples/js/postprocessing/ShaderPass.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.134/examples/js/shaders/CopyShader.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.134/examples/js/shaders/LuminosityHighPassShader.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.134/examples/js/postprocessing/UnrealBloomPass.js"></script>
+
+  <script>
+    /* =========================================================
+       ARQUITECTURA MODULAR AURA-STUDIO v2.0
+       Fase 1: Motor Gráfico Multi-Forma con VRAM Recycling
+       Fase 2: Cadena de Audio con Ecualizador Paramétrico de 3 Vías
+       Fase 3: Rack de Efectos (Reverb, Delay, Distortion)
+       ========================================================= */
+
+    // --- Variables Globales de Audio y Gráficos ---
+    let scene, camera, renderer, composer, bloomPass, controls;
+    let currentShape = 'particles';
+    let currentPalette = 'cyberpunk';
+    let audioSensitivity = 1.5;
+
+    // Entidades Gráficas
+    let particleMesh, terrainMesh, crystalMesh, cylinderGroup;
+
+    // Web Audio Core Nodes
+    let audioCtx, analyser, freqData, timeData, audioSource;
+    let isAudioActive = false;
+    let demoTimer = null;
+
+    // Nodos de Ecualización (Fase 2)
+    let eqBassNode, eqMidNode, eqTrebleNode;
+
+    // Nodos de Efectos FX (Fase 3)
+    let delayNode, delayFeedback, distortionNode, masterGainNode;
+    let currentPlaybackSource = null;
+
+    // Inicialización al cargar la página
+    window.addEventListener('DOMContentLoaded', () => {
+      initGraphics();
+      initAudioPipeline();
+      bindInterfaceEvents();
+      startRenderLoop();
+    });
+
+    // -----------------------------------------------------------
+    // FASE 1: MOTOR GRÁFICO MULTI-FORMA (Optimizado para 60 FPS)
+    // -----------------------------------------------------------
+    function initGraphics() {
+      const container = document.getElementById('canvas-container');
+      scene = new THREE.Scene();
+      scene.fog = new THREE.FogExp2(0x02040a, 0.0007);
+
+      camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 8000);
+      camera.position.set(0, 80, 750);
+
+      renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.toneMapping = THREE.ReinhardToneMapping;
+      container.appendChild(renderer.domElement);
+
+      controls = new THREE.OrbitControls(camera, renderer.domElement);
+      controls.enableDamping = true;
+      controls.dampingFactor = 0.05;
+      controls.autoRotate = true;
+      controls.autoRotateSpeed = 0.6;
+
+      // Pipeline de Post-Procesado Unreal Bloom
+      const renderPass = new THREE.RenderPass(scene, camera);
+      bloomPass = new THREE.UnrealBloomPass(
+        new THREE.Vector2(window.innerWidth, window.innerHeight),
+        1.8, 0.4, 0.12
+      );
+
+      composer = new THREE.EffectComposer(renderer);
+      composer.addPass(renderPass);
+      composer.addPass(bloomPass);
+
+      // Construcción inicial de las 4 formas (con Object Pooling)
+      createParticleSphere();
+      createTerrainMesh();
+      createCrystalPolyhedron();
+      createCylinderSpectrum();
+
+      updateActiveShapeDisplay();
+      window.addEventListener('resize', onWindowResize);
+    }
+
+    // Forma 1: Esfera de Partículas
+    function createParticleSphere() {
+      const count = 5000;
+      const geo = new THREE.BufferGeometry();
+      const pos = new Float32Array(count * 3);
+      const orig = new Float32Array(count * 3);
+      const col = new Float32Array(count * 3);
+
+      for (let i = 0; i < count; i++) {
+        const u = Math.random(), v = Math.random();
+        const theta = u * 2.0 * Math.PI;
+        const phi = Math.acos(2.0 * v - 1.0);
+        const r = 240 + Math.random() * 50;
+
+        const x = r * Math.sin(phi) * Math.cos(theta);
+        const y = r * Math.sin(phi) * Math.sin(theta);
+        const z = r * Math.cos(phi);
+
+        pos[i*3] = x; pos[i*3+1] = y; pos[i*3+2] = z;
+        orig[i*3] = x; orig[i*3+1] = y; orig[i*3+2] = z;
+        col[i*3] = 0; col[i*3+1] = 1; col[i*3+2] = 1;
+      }
+      geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+      geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+      geo.userData = { originalPos: orig };
+
+      const mat = new THREE.PointsMaterial({
+        size: 2.2,
+        vertexColors: true,
+        transparent: true,
+        opacity: 0.85,
+        blending: THREE.AdditiveBlending
+      });
+      particleMesh = new THREE.Points(geo, mat);
+      scene.add(particleMesh);
+    }
+
+    // Forma 2: Malla / Túnel de Ondas (Terrain Wireframe)
+    function createTerrainMesh() {
+      const width = 1200, depth = 1200, segments = 50;
+      const geo = new THREE.PlaneGeometry(width, depth, segments, segments);
+      geo.rotateX(-Math.PI / 2);
+      geo.userData = { originalY: new Float32Array(geo.attributes.position.array) };
+
+      const mat = new THREE.MeshBasicMaterial({
+        color: 0x00ffff,
+        wireframe: true,
+        transparent: true,
+        opacity: 0.7
+      });
+      terrainMesh = new THREE.Mesh(geo, mat);
+      terrainMesh.position.y = -150;
+      scene.add(terrainMesh);
+    }
+
+    // Forma 3: Cristal Icosaedro Reactivo
+    function createCrystalPolyhedron() {
+      const geo = new THREE.IcosahedronGeometry(180, 2);
+      geo.userData = { originalPos: new Float32Array(geo.attributes.position.array) };
+      const mat = new THREE.MeshBasicMaterial({
+        color: 0xff007f,
+        wireframe: true,
+        transparent: true,
+        opacity: 0.9
+      });
+      crystalMesh = new THREE.Mesh(geo, mat);
+      scene.add(crystalMesh);
+    }
+
+    // Forma 4: Espectro Cilíndrico (Barras 3D)
+    function createCylinderSpectrum() {
+      cylinderGroup = new THREE.Group();
+      const count = 72;
+      const radius = 260;
+
+      for (let i = 0; i < count; i++) {
+        const angle = (i / count) * Math.PI * 2;
+        const geo = new THREE.BoxGeometry(6, 20, 6);
+        const mat = new THREE.MeshBasicMaterial({ color: 0x00ffff });
+        const mesh = new THREE.Mesh(geo, mat);
+
+        mesh.position.set(Math.cos(angle) * radius, 0, Math.sin(angle) * radius);
+        mesh.rotation.y = -angle;
+        cylinderGroup.add(mesh);
+      }
+      scene.add(cylinderGroup);
+    }
+
+    // Gestión de Memoria y Visibilidad (Previene sobrecarga en GPU)
+    function updateActiveShapeDisplay() {
+      particleMesh.visible = (currentShape === 'particles');
+      terrainMesh.visible = (currentShape === 'terrain');
+      crystalMesh.visible = (currentShape === 'crystal');
+      cylinderGroup.visible = (currentShape === 'cylinder');
+    }
+
+    // -----------------------------------------------------------
+    // FASE 2 & 3: CADENA DE AUDIO COMPLETA (EQ + RACK FX)
+    // -----------------------------------------------------------
+    function initAudioPipeline() {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+      // Analizador FFT
+      analyser = audioCtx.createAnalyser();
+      analyser.fftSize = 512;
+      analyser.smoothingTimeConstant = 0.82;
+      freqData = new Uint8Array(analyser.frequencyBinCount);
+      timeData = new Uint8Array(analyser.frequencyBinCount);
+
+      // --- Nodos de Ecualización (Fase 2) ---
+      eqBassNode = audioCtx.createBiquadFilter();
+      eqBassNode.type = 'lowshelf';
+      eqBassNode.frequency.value = 200;
+      eqBassNode.gain.value = 0;
+
+      eqMidNode = audioCtx.createBiquadFilter();
+      eqMidNode.type = 'peaking';
+      eqMidNode.frequency.value = 1500;
+      eqMidNode.Q.value = 1.0;
+      eqMidNode.gain.value = 0;
+
+      eqTrebleNode = audioCtx.createBiquadFilter();
+      eqTrebleNode.type = 'highshelf';
+      eqTrebleNode.frequency.value = 5000;
+      eqTrebleNode.gain.value = 0;
+
+      // --- Nodos de Efectos FX (Fase 3) ---
+      // Delay
+      delayNode = audioCtx.createDelay(2.0);
+      delayNode.delayTime.value = 0.25;
+      delayFeedback = audioCtx.createGain();
+      delayFeedback.gain.value = 0.0;
+      delayNode.connect(delayFeedback);
+      delayFeedback.connect(delayNode);
+
+      // Distorsión / Overdrive
+      distortionNode = audioCtx.createWaveShaper();
+      distortionNode.curve = makeDistortionCurve(0);
+      distortionNode.oversample = '2x';
+
+      // Master Gain
+      masterGainNode = audioCtx.createGain();
+      masterGainNode.gain.value = 1.0;
+
+      // Conexión en Serie de la Cadena de Procesamiento:
+      // Entrada -> EQ Bass -> EQ Mid -> EQ Treble -> Distorsión -> Analizador -> Master -> Altavoces
+      //                                          \-> Delay Node ---/
+      eqBassNode.connect(eqMidNode);
+      eqMidNode.connect(eqTrebleNode);
+      eqTrebleNode.connect(distortionNode);
+      distortionNode.connect(analyser);
+      distortionNode.connect(delayNode);
+      delayNode.connect(analyser);
+
+      analyser.connect(masterGainNode);
+      masterGainNode.connect(audioCtx.destination);
+    }
+
+    function makeDistortionCurve(amount) {
+      const k = typeof amount === 'number' ? amount : 0;
+      const n_samples = 44100;
+      const curve = new Float32Array(n_samples);
+      const deg = Math.PI / 180;
+      if (k === 0) {
+        for (let i = 0; i < n_samples; i++) curve[i] = (i * 2 / n_samples) - 1;
+        return curve;
+      }
+      for (let i = 0; i < n_samples; ++i) {
+        const x = i * 2 / n_samples - 1;
+        curve[i] = (3 + k) * x * 20 * deg / (Math.PI + k * Math.abs(x));
+      }
+      return curve;
+    }
+
+    // -----------------------------------------------------------
+    // EVENTOS Y ENLACE DE LA INTERFAZ DE USUARIO
+    // -----------------------------------------------------------
+    function bindInterfaceEvents() {
+      const statusLight = document.getElementById('status-light');
+      const statusMessage = document.getElementById('status-message');
+
+      // Pestañas Superiores
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+          document.querySelectorAll('.module-view').forEach(v => v.classList.remove('active'));
+          btn.classList.add('active');
+          const target = document.getElementById(btn.dataset.tab);
+          if (target) target.classList.add('active');
+        });
+      });
+
+      // Micrófono
+      document.getElementById('btn-mic').addEventListener('click', async () => {
+        if (audioCtx.state === 'suspended') await audioCtx.resume();
+        stopCurrentSound();
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          audioSource = audioCtx.createMediaStreamSource(stream);
+          audioSource.connect(eqBassNode);
+          isAudioActive = true;
+          statusLight.className = 'indicator-light active';
+          statusMessage.textContent = 'En vivo: Micrófono (Procesando EQ & FX)';
+        } catch (err) {
+          alert('Error de acceso al micrófono: ' + err.message);
+        }
+      });
+
+      // Archivo MP3
+      document.getElementById('audio-upload').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        stopCurrentSound();
+
+        const reader = new FileReader();
+        reader.onload = function(ev) {
+          audioCtx.decodeAudioData(ev.target.result, function(buffer) {
+            const bufferSource = audioCtx.createBufferSource();
+            bufferSource.buffer = buffer;
+            bufferSource.loop = true;
+            bufferSource.connect(eqBassNode);
+            bufferSource.start(0);
+            currentPlaybackSource = bufferSource;
+            isAudioActive = true;
+            statusLight.className = 'indicator-light active';
+            statusMessage.textContent = 'Reproduciendo: ' + file.name.substring(0, 22);
+          });
+        };
+        reader.readAsArrayBuffer(file);
+      });
+
+      // Demo Synth Beat
+      document.getElementById('btn-demo').addEventListener('click', () => {
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        stopCurrentSound();
+        isAudioActive = true;
+        statusLight.className = 'indicator-light active';
+        statusMessage.textContent = 'Modo Demo: Sintetizador Reactivo';
+
+        let beat = 0;
+        demoTimer = setInterval(() => {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          const freq = (beat % 4 === 0) ? 65 : (beat % 2 === 0 ? 200 : 420 + Math.random() * 300);
+          osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+          gain.gain.setValueAtTime(0.4, audioCtx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.28);
+          osc.connect(gain);
+          gain.connect(eqBassNode);
+          osc.start();
+          osc.stop(audioCtx.currentTime + 0.28);
+          beat++;
+        }, 280);
+      });
+
+      // Controles de Forma y Bloom (Fase 1)
+      document.getElementById('shape-select').addEventListener('change', (e) => {
+        currentShape = e.target.value;
+        updateActiveShapeDisplay();
+      });
+      document.getElementById('palette-select').addEventListener('change', (e) => {
+        currentPalette = e.target.value;
+      });
+      document.getElementById('slider-bloom').addEventListener('input', (e) => {
+        bloomPass.strength = parseFloat(e.target.value);
+        document.getElementById('txt-bloom').textContent = e.target.value;
+      });
+      document.getElementById('slider-sens').addEventListener('input', (e) => {
+        audioSensitivity = parseFloat(e.target.value);
+        document.getElementById('txt-sens').textContent = e.target.value;
+      });
+
+      // Controles de Ecualizador (Fase 2)
+      document.getElementById('eq-bass').addEventListener('input', (e) => {
+        eqBassNode.gain.value = parseFloat(e.target.value);
+        document.getElementById('txt-bass').textContent = e.target.value + ' dB';
+      });
+      document.getElementById('eq-mid').addEventListener('input', (e) => {
+        eqMidNode.gain.value = parseFloat(e.target.value);
+        document.getElementById('txt-mid').textContent = e.target.value + ' dB';
+      });
+      document.getElementById('eq-treble').addEventListener('input', (e) => {
+        eqTrebleNode.gain.value = parseFloat(e.target.value);
+        document.getElementById('txt-treble').textContent = e.target.value + ' dB';
+      });
+      document.getElementById('btn-isolate-bass').addEventListener('click', () => {
+        eqBassNode.gain.value = 18;
+        eqMidNode.gain.value = -20;
+        eqTrebleNode.gain.value = -24;
+        updateEqSliders();
+      });
+      document.getElementById('btn-isolate-vocals').addEventListener('click', () => {
+        eqBassNode.gain.value = -18;
+        eqMidNode.gain.value = 16;
+        eqTrebleNode.gain.value = -10;
+        updateEqSliders();
+      });
+      document.getElementById('btn-reset-eq').addEventListener('click', () => {
+        eqBassNode.gain.value = 0;
+        eqMidNode.gain.value = 0;
+        eqTrebleNode.gain.value = 0;
+        updateEqSliders();
+      });
+
+      // Controles de Efectos FX (Fase 3)
+      document.getElementById('fx-delay').addEventListener('input', (e) => {
+        const val = parseFloat(e.target.value);
+        delayFeedback.gain.value = val;
+        document.getElementById('txt-delay').textContent = Math.round(val * 100) + '%';
+      });
+      document.getElementById('fx-dist').addEventListener('input', (e) => {
+        const val = parseInt(e.target.value);
+        distortionNode.curve = makeDistortionCurve(val);
+        document.getElementById('txt-dist').textContent = val + '%';
+      });
+      document.getElementById('fx-speed').addEventListener('input', (e) => {
+        const val = parseFloat(e.target.value);
+        if (currentPlaybackSource && currentPlaybackSource.playbackRate) {
+          currentPlaybackSource.playbackRate.value = val;
+        }
+        document.getElementById('txt-speed').textContent = val.toFixed(1) + 'x';
+      });
+
+      // Alternar panel lateral
+      document.getElementById('toggle-panel-btn').addEventListener('click', () => {
+        document.getElementById('sidebar-panel').classList.toggle('collapsed');
+      });
+    }
+
+    function updateEqSliders() {
+      document.getElementById('eq-bass').value = eqBassNode.gain.value;
+      document.getElementById('txt-bass').textContent = eqBassNode.gain.value + ' dB';
+      document.getElementById('eq-mid').value = eqMidNode.gain.value;
+      document.getElementById('txt-mid').textContent = eqMidNode.gain.value + ' dB';
+      document.getElementById('eq-treble').value = eqTrebleNode.gain.value;
+      document.getElementById('txt-treble').textContent = eqTrebleNode.gain.value + ' dB';
+    }
+
+    function stopCurrentSound() {
+      if (demoTimer) { clearInterval(demoTimer); demoTimer = null; }
+      if (currentPlaybackSource) {
+        try { currentPlaybackSource.stop(); } catch(e){}
+        currentPlaybackSource = null;
+      }
+    }
+
+    // -----------------------------------------------------------
+    // BUCLE DE RENDERIZADO Y ACTUALIZACIÓN VISUAL EN TIEMPO REAL
+    // -----------------------------------------------------------
+    function startRenderLoop() {
+      requestAnimationFrame(startRenderLoop);
+      controls.update();
+
+      if (isAudioActive && analyser) {
+        analyser.getByteFrequencyData(freqData);
+
+        const binCount = analyser.frequencyBinCount;
+        let avgBass = 0, avgMid = 0, avgTreble = 0;
+        for (let i = 0; i < 20; i++) avgBass += freqData[i];
+        for (let i = 20; i < 100; i++) avgMid += freqData[i];
+        for (let i = 100; i < binCount; i++) avgTreble += freqData[i];
+        avgBass = (avgBass / 20 / 255) * audioSensitivity;
+        avgMid = (avgMid / 80 / 255) * audioSensitivity;
+        avgTreble = (avgTreble / (binCount - 100) / 255) * audioSensitivity;
+
+        // 1. Esfera de Partículas
+        if (currentShape === 'particles' && particleMesh.visible) {
+          const pos = particleMesh.geometry.attributes.position.array;
+          const orig = particleMesh.geometry.userData.originalPos;
+          const col = particleMesh.geometry.attributes.color.array;
+
+          for (let i = 0; i < 5000; i++) {
+            const energy = (freqData[i % binCount] / 255) * audioSensitivity;
+            const factor = 1.0 + energy * 0.85;
+            pos[i*3] = orig[i*3] * factor;
+            pos[i*3+1] = orig[i*3+1] * factor;
+            pos[i*3+2] = orig[i*3+2] * factor;
+
+            applyPaletteColor(col, i, energy);
+          }
+          particleMesh.geometry.attributes.position.needsUpdate = true;
+          particleMesh.geometry.attributes.color.needsUpdate = true;
+        }
+
+        // 2. Malla / Terreno de Ondas
+        if (currentShape === 'terrain' && terrainMesh.visible) {
+          const pos = terrainMesh.geometry.attributes.position.array;
+          const origY = terrainMesh.geometry.userData.originalY;
+          for (let i = 0; i < pos.length / 3; i++) {
+            const wave = (freqData[i % binCount] / 255) * audioSensitivity;
+            pos[i*3+1] = origY[i*3+1] + wave * 90;
+          }
+          terrainMesh.geometry.attributes.position.needsUpdate = true;
+          terrainMesh.rotation.y += 0.002;
+        }
+
+        // 3. Cristal Icosaedro Reactivo
+        if (currentShape === 'crystal' && crystalMesh.visible) {
+          const scale = 1.0 + avgBass * 0.5;
+          crystalMesh.scale.set(scale, scale, scale);
+          crystalMesh.rotation.x += 0.01 + avgTreble * 0.02;
+          crystalMesh.rotation.y += 0.015 + avgMid * 0.02;
+        }
+
+        // 4. Espectro Cilíndrico (Barras 3D)
+        if (currentShape === 'cylinder' && cylinderGroup.visible) {
+          for (let i = 0; i < cylinderGroup.children.length; i++) {
+            const bar = cylinderGroup.children[i];
+            const val = (freqData[i % binCount] / 255) * audioSensitivity;
+            bar.scale.y = Math.max(0.1, val * 16);
+            bar.material.color.setHSL(0.55 + val * 0.4, 1.0, 0.5);
+          }
+        }
+      }
+
+      composer.render();
+    }
+
+    function applyPaletteColor(colArray, i, energy) {
+      if (currentPalette === 'cyberpunk') {
+        colArray[i*3] = THREE.MathUtils.lerp(0.0, 1.0, energy);
+        colArray[i*3+1] = THREE.MathUtils.lerp(0.9, 0.1, energy);
+        colArray[i*3+2] = 1.0;
+      } else if (currentPalette === 'emerald') {
+        colArray[i*3] = 0.0;
+        colArray[i*3+1] = THREE.MathUtils.lerp(0.6, 1.0, energy);
+        colArray[i*3+2] = THREE.MathUtils.lerp(0.2, 0.7, energy);
+      } else if (currentPalette === 'solar') {
+        colArray[i*3] = 1.0;
+        colArray[i*3+1] = THREE.MathUtils.lerp(0.3, 0.9, energy);
+        colArray[i*3+2] = 0.0;
+      } else {
+        colArray[i*3] = THREE.MathUtils.lerp(0.5, 0.9, energy);
+        colArray[i*3+1] = 0.1;
+        colArray[i*3+2] = 1.0;
+      }
+    }
+
+    function onWindowResize() {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      composer.setSize(window.innerWidth, window.innerHeight);
+    }
+  </script>
+</body>
+</html>

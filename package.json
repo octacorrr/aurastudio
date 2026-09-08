@@ -1,0 +1,13 @@
+{
+  "name": "aurastudio-3d",
+  "version": "2.0.0",
+  "description": "Suite de Audio, Ecualizador y Visualizador 3D WebGL con Unreal Bloom y soporte AdSense",
+  "main": "index.html",
+  "scripts": {
+    "start": "npx serve .",
+    "dev": "npx serve ."
+  },
+  "keywords": ["webgl", "threejs", "audio-visualizer", "equalizer", "web-audio-api", "bloom"],
+  "author": "Octavio Hernandez",
+  "license": "MIT"
+}
