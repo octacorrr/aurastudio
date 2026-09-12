@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>AuraStudio App – Visualizador y Ecualizador 3D</title>
   <meta name="description" content="Suite de audio 3D: visualizador WebGL, ecualizador y efectos en el navegador.">
   <style>
@@ -13,17 +13,9 @@
       z-index: 9999; background: #02040a;
     }
     #boot p { color: #7da5c2; font-size: 14px; }
-    #home-link {
-      position: fixed; top: 16px; right: 16px; z-index: 10000;
-      background: rgba(6,14,30,0.9); border: 1px solid rgba(0,255,255,0.35);
-      color: #00ffff; padding: 8px 14px; border-radius: 20px; font-size: 12px;
-      font-weight: 600; text-decoration: none; backdrop-filter: blur(10px);
-      font-family: system-ui, sans-serif;
-    }
   </style>
 </head>
 <body>
-  <a href="/" id="home-link">← Inicio</a>
   <div id="boot">
     <div>AuraStudio</div>
     <p>Cargando suite 3D…</p>
@@ -40,29 +32,116 @@
         document.close();
 
         setTimeout(function () {
-          if (!document.getElementById('home-link')) {
-            var a = document.createElement('a');
-            a.href = '/';
-            a.id = 'home-link';
-            a.textContent = '← Inicio';
-            a.style.cssText = 'position:fixed;top:16px;right:16px;z-index:120;background:rgba(6,14,30,0.9);border:1px solid rgba(0,255,255,0.35);color:#00ffff;padding:8px 14px;border-radius:20px;font-size:12px;font-weight:600;text-decoration:none;backdrop-filter:blur(10px);font-family:system-ui,sans-serif';
-            document.body.appendChild(a);
-          }
-          // Adsterra Social Bar
-          if (!document.getElementById('adsterra-social-bar')) {
-            var s = document.createElement('script');
-            s.id = 'adsterra-social-bar';
-            s.src = 'https://pl31300605.profitableratecpmnetwork.com/ea/75/22/ea75223d2edf933c49d42315bebafd78.js';
-            document.body.appendChild(s);
-          }
-        }, 800);
+          injectMobileLayoutFix();
+          injectHomeLink();
+          injectSocialBar();
+        }, 600);
       } catch (e) {
         document.getElementById('boot').innerHTML =
           '<div style="color:#ff6b6b">No se pudo cargar la app</div>' +
-          '<p style="color:#7da5c2;max-width:360px;text-align:center">' + e.message +
+          '<p style="color:#7da5c2;max-width:360px;text-align:center">' + (e && e.message ? e.message : e) +
           '</p><p><a href="/" style="color:#00ffff">Volver al inicio</a></p>';
       }
     })();
+
+    function injectHomeLink() {
+      if (document.getElementById('home-link')) return;
+      var a = document.createElement('a');
+      a.href = '/';
+      a.id = 'home-link';
+      a.textContent = '← Inicio';
+      a.style.cssText = 'position:fixed;top:12px;right:12px;z-index:200;background:rgba(6,14,30,0.95);border:1px solid rgba(0,255,255,0.4);color:#00ffff;padding:8px 14px;border-radius:20px;font-size:12px;font-weight:600;text-decoration:none;font-family:system-ui,sans-serif';
+      document.body.appendChild(a);
+    }
+
+    function injectSocialBar() {
+      if (document.getElementById('adsterra-social-bar')) return;
+      var s = document.createElement('script');
+      s.id = 'adsterra-social-bar';
+      s.src = 'https://pl31300605.profitableratecpmnetwork.com/ea/75/22/ea75223d2edf933c49d42315bebafd78.js';
+      document.body.appendChild(s);
+    }
+
+    function injectMobileLayoutFix() {
+      if (document.getElementById('aura-mobile-fix')) return;
+
+      var css = document.createElement('style');
+      css.id = 'aura-mobile-fix';
+      css.textContent = [
+        /* Ocultar placeholder viejo de AdSense */
+        '.ad-top-banner, .ad-sidebar-slot { display: none !important; }',
+
+        /* Móvil / pantallas estrechas: panel abajo como hoja */
+        '@media (max-width: 900px) {',
+        '  #nav-tabs {',
+        '    top: 12px !important;',
+        '    left: 50% !important;',
+        '    transform: translateX(-50%) !important;',
+        '    max-width: calc(100vw - 24px);',
+        '    flex-wrap: wrap;',
+        '    justify-content: center;',
+        '    z-index: 150 !important;',
+        '  }',
+        '  #toggle-panel-btn {',
+        '    top: auto !important;',
+        '    bottom: 72px !important;',
+        '    left: 12px !important;',
+        '    z-index: 160 !important;',
+        '  }',
+        '  #sidebar-panel {',
+        '    top: auto !important;',
+        '    left: 0 !important;',
+        '    right: 0 !important;',
+        '    bottom: 0 !important;',
+        '    width: 100% !important;',
+        '    max-width: 100% !important;',
+        '    max-height: 48vh !important;',
+        '    border-radius: 18px 18px 0 0 !important;',
+        '    border-left: none !important;',
+        '    border-right: none !important;',
+        '    border-bottom: none !important;',
+        '    transform: none !important;',
+        '    opacity: 1 !important;',
+        '    pointer-events: auto !important;',
+        '    z-index: 140 !important;',
+        '  }',
+        '  #sidebar-panel.collapsed {',
+        '    transform: translateY(calc(100% - 52px)) !important;',
+        '    opacity: 1 !important;',
+        '    pointer-events: auto !important;',
+        '  }',
+        '  #sidebar-panel .panel-content {',
+        '    max-height: calc(48vh - 120px);',
+        '    overflow-y: auto;',
+        '    -webkit-overflow-scrolling: touch;',
+        '  }',
+        '  #status-bar {',
+        '    bottom: 8px !important;',
+        '    z-index: 130 !important;',
+        '  }',
+        '}',
+
+        /* Escritorio: panel lateral usable, no tapa tanto */
+        '@media (min-width: 901px) {',
+        '  #sidebar-panel { max-height: calc(100vh - 40px); }',
+        '  .ad-top-banner { display: none !important; }',
+        '}'
+      ].join('\n');
+      document.head.appendChild(css);
+
+      // Asegurar que el botón de menú colapsa/expande el panel
+      var btn = document.getElementById('toggle-panel-btn');
+      var panel = document.getElementById('sidebar-panel');
+      if (btn && panel) {
+        // En móvil: empezar colapsado para ver el visualizador
+        if (window.innerWidth <= 900) {
+          panel.classList.add('collapsed');
+        }
+        btn.addEventListener('click', function () {
+          panel.classList.toggle('collapsed');
+        }, { passive: true });
+      }
+    }
   </script>
 </body>
 </html>
