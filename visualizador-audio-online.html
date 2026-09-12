@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Visualizador de Audio Online Gratis (3D) – AuraStudio</title>
+  <meta name="description" content="Visualizador de audio online gratis con WebGL 3D. Reacciona a micrófono o MP3 en tiempo real. Ecualizador y efectos incluidos. Sin instalar nada.">
+  <meta name="keywords" content="visualizador de audio online, visualizador de música gratis, audio visualizer web, spectrum analyzer online, visualizador 3d audio">
+  <link rel="canonical" href="/visualizador-audio-online.html">
+  <style>
+    :root {
+      --primary: #00ffff;
+      --bg: #02040a;
+      --text: #e2f4ff;
+      --muted: #7da5c2;
+      --panel: rgba(6, 12, 26, 0.9);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.65;
+    }
+    header {
+      position: sticky; top: 0; z-index: 20;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0.9rem 1.4rem;
+      background: rgba(2,4,10,0.95);
+      border-bottom: 1px solid rgba(0,255,255,0.18);
+      backdrop-filter: blur(10px);
+    }
+    .logo { color: var(--primary); font-weight: 800; text-decoration: none; font-size: 1.15rem; }
+    nav a { color: var(--muted); text-decoration: none; margin-left: 0.9rem; font-size: 0.9rem; }
+    nav a:hover { color: var(--primary); }
+    .btn {
+      display: inline-block;
+      background: var(--primary);
+      color: #001018;
+      font-weight: 700;
+      padding: 0.7rem 1.3rem;
+      border-radius: 999px;
+      text-decoration: none;
+      box-shadow: 0 0 18px rgba(0,255,255,0.35);
+    }
+    .wrap { max-width: 720px; margin: 0 auto; padding: 2.2rem 1.3rem 3rem; }
+    h1 { font-size: clamp(1.6rem, 4vw, 2.1rem); color: var(--primary); margin-bottom: 0.8rem; line-height: 1.25; }
+    h2 { font-size: 1.2rem; color: #5bb3e0; margin: 1.8rem 0 0.7rem; }
+    p { color: #c5e0f0; margin-bottom: 0.9rem; }
+    ul { margin: 0.5rem 0 1rem 1.2rem; color: #c5e0f0; }
+    li { margin-bottom: 0.4rem; }
+    .cta-box {
+      background: var(--panel);
+      border: 1px solid rgba(0,255,255,0.25);
+      border-radius: 14px;
+      padding: 1.3rem;
+      text-align: center;
+      margin: 1.5rem 0;
+    }
+    .cta-box p { color: var(--muted); margin-bottom: 0.9rem; }
+    .ad-slot {
+      min-height: 50px;
+      border: 1px dashed rgba(0,255,255,0.2);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      color: rgba(255,255,255,0.3);
+      font-size: 0.75rem;
+      margin: 1.2rem 0;
+    }
+    footer {
+      text-align: center;
+      padding: 1.3rem;
+      border-top: 1px solid rgba(0,255,255,0.12);
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+    footer a { color: var(--primary); text-decoration: none; margin: 0 0.3rem; }
+  </style>
+</head>
+<body>
+  <header>
+    <a class="logo" href="/">AuraStudio</a>
+    <nav>
+      <a href="/app.html">App</a>
+      <a href="/privacy.html">Privacidad</a>
+      <a href="/terms.html">Términos</a>
+    </nav>
+  </header>
+
+  <main class="wrap">
+    <h1>Visualizador de audio online gratis (3D)</h1>
+    <p>
+      AuraStudio es un <strong>visualizador de audio online</strong> que funciona en el navegador:
+      no hace falta instalar programas ni plugins. Conecta el micrófono o sube un MP3 y verás
+      formas 3D reaccionando a la música en tiempo real.
+    </p>
+
+    <div class="cta-box">
+      <p>Prueba el visualizador ahora — micrófono, MP3 o beat de demo.</p>
+      <a class="btn" href="/app.html">Abrir visualizador 3D →</a>
+    </div>
+
+    <div class="ad-slot" id="ad-landing-1">ESPACIO PUBLICITARIO</div>
+
+    <h2>¿Qué es un visualizador de audio web?</h2>
+    <p>
+      Un visualizador de audio transforma el sonido en movimiento e imágenes. En AuraStudio
+      usamos Web Audio API y WebGL (Three.js) para analizar frecuencias y dibujar partículas,
+      mallas, cristales o un espectro cilíndrico que se mueve con la música.
+    </p>
+
+    <h2>Qué puedes hacer en AuraStudio</h2>
+    <ul>
+      <li>Visualización 3D con varias geometrías y paletas de color</li>
+      <li>Ecualizador de 3 bandas (graves, medios, agudos)</li>
+      <li>Efectos: reverb, delay, distorsión y velocidad</li>
+      <li>Entrada por micrófono, archivo MP3 o sintetizador de demostración</li>
+      <li>Todo en el navegador, sin subir tu audio a un servidor</li>
+    </ul>
+
+    <h2>Cómo usarlo paso a paso</h2>
+    <ul>
+      <li>Entra en la <a href="/app.html" style="color:#00ffff">app de AuraStudio</a></li>
+      <li>Elige micrófono, sube un MP3 o pulsa “Demo Synth Beat”</li>
+      <li>Cambia la forma 3D y la intensidad del efecto bloom</li>
+      <li>Ajusta el ecualizador y los efectos FX desde el panel</li>
+    </ul>
+
+    <h2>¿Sirve para DJs, productores o estudiantes?</h2>
+    <p>
+      Sí. Es útil para probar cómo se ve un tema, para contenido visual en redes, o para
+      aprender cómo se analiza el audio en el navegador. No sustituye un DAW profesional,
+      pero es rápido, gratuito y no requiere instalación.
+    </p>
+
+    <div class="cta-box">
+      <p>Sin registro. Compatible con Chrome, Edge, Firefox y navegadores modernos.</p>
+      <a class="btn" href="/app.html">Probar ahora</a>
+    </div>
+
+    <div class="ad-slot" id="ad-landing-2">ESPACIO PUBLICITARIO</div>
+
+    <h2>Preguntas frecuentes</h2>
+    <p><strong>¿Es gratis?</strong> Sí, el uso de la herramienta en el navegador es gratuito.</p>
+    <p><strong>¿Se guarda mi audio?</strong> No. El procesamiento es local en tu dispositivo.</p>
+    <p><strong>¿Funciona en el móvil?</strong> Sí, aunque la experiencia 3D es más cómoda en escritorio.</p>
+  </main>
+
+  <footer>
+    <p>
+      © 2026 AuraStudio
+      · <a href="/">Inicio</a>
+      · <a href="/app.html">App</a>
+      · <a href="/privacy.html">Privacidad</a>
+      · <a href="/terms.html">Términos</a>
+    </p>
+  </footer>
+</body>
+</html>
