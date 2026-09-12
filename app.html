@@ -29,19 +29,16 @@
     <p>Cargando suite 3D…</p>
   </div>
   <script>
-    // Carga la app completa desde el commit estable del repo (HTML autocontenido)
     (async function () {
       const url = 'https://cdn.jsdelivr.net/gh/octacorrr/aurastudio@f046ed409636ecf6f86633a23daa7112c928cd10/index.html';
       try {
         const res = await fetch(url);
         if (!res.ok) throw new Error('HTTP ' + res.status);
-        let html = await res.text();
-        // Quitar el documento exterior e inyectar en la página actual
-        // Mejor: reemplazar todo el documento
+        const html = await res.text();
         document.open();
         document.write(html);
         document.close();
-        // Re-inyectar enlace a inicio tras el rewrite
+
         setTimeout(function () {
           if (!document.getElementById('home-link')) {
             var a = document.createElement('a');
@@ -50,6 +47,13 @@
             a.textContent = '← Inicio';
             a.style.cssText = 'position:fixed;top:16px;right:16px;z-index:120;background:rgba(6,14,30,0.9);border:1px solid rgba(0,255,255,0.35);color:#00ffff;padding:8px 14px;border-radius:20px;font-size:12px;font-weight:600;text-decoration:none;backdrop-filter:blur(10px);font-family:system-ui,sans-serif';
             document.body.appendChild(a);
+          }
+          // Adsterra Social Bar
+          if (!document.getElementById('adsterra-social-bar')) {
+            var s = document.createElement('script');
+            s.id = 'adsterra-social-bar';
+            s.src = 'https://pl31300605.profitableratecpmnetwork.com/ea/75/22/ea75223d2edf933c49d42315bebafd78.js';
+            document.body.appendChild(s);
           }
         }, 800);
       } catch (e) {
