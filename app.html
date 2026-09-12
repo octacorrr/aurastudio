@@ -26,21 +26,22 @@
       try {
         const res = await fetch(url);
         if (!res.ok) throw new Error('HTTP ' + res.status);
-        const html = await res.text();
         document.open();
-        document.write(html);
+        document.write(await res.text());
         document.close();
-
         setTimeout(function () {
           injectMobileLayoutFix();
           injectHomeLink();
           injectSocialBar();
-        }, 600);
+        }, 500);
       } catch (e) {
-        document.getElementById('boot').innerHTML =
-          '<div style="color:#ff6b6b">No se pudo cargar la app</div>' +
-          '<p style="color:#7da5c2;max-width:360px;text-align:center">' + (e && e.message ? e.message : e) +
-          '</p><p><a href="/" style="color:#00ffff">Volver al inicio</a></p>';
+        var boot = document.getElementById('boot');
+        if (boot) {
+          boot.innerHTML =
+            '<div style="color:#ff6b6b">No se pudo cargar la app</div>' +
+            '<p style="color:#7da5c2;max-width:360px;text-align:center">' + (e && e.message ? e.message : e) +
+            '</p><p><a href="/" style="color:#00ffff">Volver al inicio</a></p>';
+        }
       }
     })();
 
@@ -50,7 +51,7 @@
       a.href = '/';
       a.id = 'home-link';
       a.textContent = '← Inicio';
-      a.style.cssText = 'position:fixed;top:12px;right:12px;z-index:200;background:rgba(6,14,30,0.95);border:1px solid rgba(0,255,255,0.4);color:#00ffff;padding:8px 14px;border-radius:20px;font-size:12px;font-weight:600;text-decoration:none;font-family:system-ui,sans-serif';
+      a.style.cssText = 'position:fixed;top:10px;right:10px;z-index:300;background:rgba(6,14,30,0.95);border:1px solid rgba(0,255,255,0.4);color:#00ffff;padding:8px 12px;border-radius:20px;font-size:12px;font-weight:600;text-decoration:none;font-family:system-ui,sans-serif';
       document.body.appendChild(a);
     }
 
@@ -68,78 +69,147 @@
       var css = document.createElement('style');
       css.id = 'aura-mobile-fix';
       css.textContent = [
-        /* Ocultar placeholder viejo de AdSense */
         '.ad-top-banner, .ad-sidebar-slot { display: none !important; }',
 
-        /* Móvil / pantallas estrechas: panel abajo como hoja */
         '@media (max-width: 900px) {',
         '  #nav-tabs {',
-        '    top: 12px !important;',
+        '    top: 10px !important;',
         '    left: 50% !important;',
+        '    right: auto !important;',
         '    transform: translateX(-50%) !important;',
-        '    max-width: calc(100vw - 24px);',
-        '    flex-wrap: wrap;',
-        '    justify-content: center;',
-        '    z-index: 150 !important;',
+        '    max-width: calc(100vw - 100px);',
+        '    z-index: 250 !important;',
         '  }',
+        '  #nav-tabs .tab-btn { padding: 6px 10px !important; font-size: 11px !important; }',
+
+        '  /* Botón menú: arriba a la izquierda, siempre visible */',
         '  #toggle-panel-btn {',
-        '    top: auto !important;',
-        '    bottom: 72px !important;',
-        '    left: 12px !important;',
-        '    z-index: 160 !important;',
+        '    top: 10px !important;',
+        '    left: 10px !important;',
+        '    bottom: auto !important;',
+        '    z-index: 260 !important;',
+        '    width: 42px !important;',
+        '    height: 42px !important;',
         '  }',
+
+        '  /* Panel = hoja inferior */',
         '  #sidebar-panel {',
         '    top: auto !important;',
         '    left: 0 !important;',
         '    right: 0 !important;',
         '    bottom: 0 !important;',
         '    width: 100% !important;',
-        '    max-width: 100% !important;',
-        '    max-height: 48vh !important;',
-        '    border-radius: 18px 18px 0 0 !important;',
-        '    border-left: none !important;',
-        '    border-right: none !important;',
+        '    max-width: 100vw !important;',
+        '    height: auto !important;',
+        '    max-height: 55vh !important;',
+        '    border-radius: 16px 16px 0 0 !important;',
+        '    border: 1px solid rgba(0,255,255,0.25) !important;',
         '    border-bottom: none !important;',
-        '    transform: none !important;',
+        '    box-shadow: 0 -8px 30px rgba(0,0,0,0.6) !important;',
+        '    transform: translateY(0) !important;',
         '    opacity: 1 !important;',
         '    pointer-events: auto !important;',
-        '    z-index: 140 !important;',
+        '    z-index: 200 !important;',
+        '    transition: transform 0.3s ease, max-height 0.3s ease !important;',
+        '    display: flex !important;',
+        '    flex-direction: column !important;',
+        '    padding-bottom: 12px !important;',
         '  }',
+
+        '  /* Colapsado: solo cabecera visible (~56px) */',
         '  #sidebar-panel.collapsed {',
-        '    transform: translateY(calc(100% - 52px)) !important;',
+        '    max-height: 56px !important;',
+        '    overflow: hidden !important;',
+        '    transform: translateY(0) !important;',
         '    opacity: 1 !important;',
         '    pointer-events: auto !important;',
+        '  }',
+
+        '  #sidebar-panel .panel-header {',
+        '    flex-shrink: 0;',
+        '    cursor: pointer;',
+        '    padding: 12px 16px !important;',
         '  }',
         '  #sidebar-panel .panel-content {',
-        '    max-height: calc(48vh - 120px);',
-        '    overflow-y: auto;',
+        '    overflow-y: auto !important;',
         '    -webkit-overflow-scrolling: touch;',
+        '    flex: 1;',
+        '    max-height: none !important;',
+        '    padding-bottom: 8px;',
         '  }',
+
         '  #status-bar {',
-        '    bottom: 8px !important;',
-        '    z-index: 130 !important;',
+        '    bottom: 62px !important;',
+        '    z-index: 180 !important;',
+        '    font-size: 11px !important;',
+        '  }',
+        '  #sidebar-panel.collapsed ~ #status-bar,',
+        '  body:has(#sidebar-panel.collapsed) #status-bar {',
+        '    bottom: 62px !important;',
         '  }',
         '}',
 
-        /* Escritorio: panel lateral usable, no tapa tanto */
         '@media (min-width: 901px) {',
-        '  #sidebar-panel { max-height: calc(100vh - 40px); }',
         '  .ad-top-banner { display: none !important; }',
+        '  #sidebar-panel { max-height: calc(100vh - 40px); }',
         '}'
       ].join('\n');
       document.head.appendChild(css);
 
-      // Asegurar que el botón de menú colapsa/expande el panel
       var btn = document.getElementById('toggle-panel-btn');
       var panel = document.getElementById('sidebar-panel');
-      if (btn && panel) {
-        // En móvil: empezar colapsado para ver el visualizador
-        if (window.innerWidth <= 900) {
-          panel.classList.add('collapsed');
-        }
-        btn.addEventListener('click', function () {
-          panel.classList.toggle('collapsed');
-        }, { passive: true });
+      if (!panel) return;
+
+      // Móvil: empezar colapsado
+      if (window.innerWidth <= 900) {
+        panel.classList.add('collapsed');
+      }
+
+      function togglePanel() {
+        panel.classList.toggle('collapsed');
+      }
+
+      if (btn) {
+        btn.onclick = function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+          togglePanel();
+        };
+      }
+
+      // Tocar la cabecera del panel también abre/cierra
+      var header = panel.querySelector('.panel-header');
+      if (header) {
+        header.addEventListener('click', function () {
+          if (window.innerWidth <= 900) togglePanel();
+        });
+      }
+
+      // Barra extra "Controles" si el panel está colapsado y no se nota
+      if (window.innerWidth <= 900 && !document.getElementById('aura-open-controls')) {
+        var openBtn = document.createElement('button');
+        openBtn.id = 'aura-open-controls';
+        openBtn.type = 'button';
+        openBtn.textContent = '▲ Controles';
+        openBtn.style.cssText = [
+          'position:fixed', 'left:50%', 'transform:translateX(-50%)',
+          'bottom:8px', 'z-index:220',
+          'background:rgba(0,255,255,0.15)', 'border:1px solid rgba(0,255,255,0.5)',
+          'color:#00ffff', 'padding:8px 18px', 'border-radius:20px',
+          'font-size:13px', 'font-weight:700', 'font-family:system-ui,sans-serif',
+          'backdrop-filter:blur(8px)'
+        ].join(';');
+        openBtn.onclick = function () {
+          panel.classList.remove('collapsed');
+          openBtn.style.display = 'none';
+        };
+        document.body.appendChild(openBtn);
+
+        // Mostrar/ocultar según estado del panel
+        var obs = new MutationObserver(function () {
+          openBtn.style.display = panel.classList.contains('collapsed') ? 'block' : 'none';
+        });
+        obs.observe(panel, { attributes: true, attributeFilter: ['class'] });
       }
     }
   </script>
