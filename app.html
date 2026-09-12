@@ -26,13 +26,33 @@
       try {
         const res = await fetch(url);
         if (!res.ok) throw new Error('HTTP ' + res.status);
+        let html = await res.text();
+
+        // --- Parche: paleta también en malla, cristal y cilindro ---
+        html = html.replace(
+          "document.getElementById('palette-select').addEventListener('change', (e) => {\n        currentPalette = e.target.value;\n      });",
+          "document.getElementById('palette-select').addEventListener('change', (e) => {\n        currentPalette = e.target.value;\n        applyShapePalette();\n      });\n\n    function applyShapePalette() {\n      const map = {\n        cyberpunk: { terrain: 0x00ffff, crystal: 0xff007f, hue: 0.55 },\n        emerald:   { terrain: 0x00ff66, crystal: 0x39ff14, hue: 0.35 },\n        solar:     { terrain: 0xff6600, crystal: 0xffaa00, hue: 0.08 },\n        violet:    { terrain: 0x9944ff, crystal: 0xcc66ff, hue: 0.75 }\n      };\n      const p = map[currentPalette] || map.cyberpunk;\n      if (terrainMesh && terrainMesh.material) terrainMesh.material.color.setHex(p.terrain);\n      if (crystalMesh && crystalMesh.material) crystalMesh.material.color.setHex(p.crystal);\n      window.__auraPaletteHue = p.hue;\n    }\n    window.__auraPaletteHue = 0.55;"
+        );
+
+        // Cilindro: usar tono de la paleta en lugar de HSL fijo
+        html = html.replace(
+          'bar.material.color.setHSL(0.55 + val * 0.4, 1.0, 0.5);',
+          'bar.material.color.setHSL((window.__auraPaletteHue || 0.55) + val * 0.25, 1.0, 0.45 + val * 0.2);'
+        );
+
         document.open();
-        document.write(await res.text());
+        document.write(html);
         document.close();
+
         setTimeout(function () {
           injectMobileLayoutFix();
           injectHomeLink();
           injectSocialBar();
+          // Aplicar paleta actual por si el usuario ya cambió el select
+          try {
+            var sel = document.getElementById('palette-select');
+            if (sel) sel.dispatchEvent(new Event('change'));
+          } catch (err) {}
         }, 500);
       } catch (e) {
         var boot = document.getElementById('boot');
@@ -70,89 +90,23 @@
       css.id = 'aura-mobile-fix';
       css.textContent = [
         '.ad-top-banner, .ad-sidebar-slot { display: none !important; }',
-
         '@media (max-width: 900px) {',
-        '  #nav-tabs {',
-        '    top: 10px !important;',
-        '    left: 50% !important;',
-        '    right: auto !important;',
-        '    transform: translateX(-50%) !important;',
-        '    max-width: calc(100vw - 100px);',
-        '    z-index: 250 !important;',
-        '  }',
+        '  #nav-tabs { top: 10px !important; left: 50% !important; transform: translateX(-50%) !important; max-width: calc(100vw - 100px); z-index: 250 !important; }',
         '  #nav-tabs .tab-btn { padding: 6px 10px !important; font-size: 11px !important; }',
-
-        '  /* Botón menú: arriba a la izquierda, siempre visible */',
-        '  #toggle-panel-btn {',
-        '    top: 10px !important;',
-        '    left: 10px !important;',
-        '    bottom: auto !important;',
-        '    z-index: 260 !important;',
-        '    width: 42px !important;',
-        '    height: 42px !important;',
-        '  }',
-
-        '  /* Panel = hoja inferior */',
+        '  #toggle-panel-btn { top: 10px !important; left: 10px !important; bottom: auto !important; z-index: 260 !important; width: 42px !important; height: 42px !important; }',
         '  #sidebar-panel {',
-        '    top: auto !important;',
-        '    left: 0 !important;',
-        '    right: 0 !important;',
-        '    bottom: 0 !important;',
-        '    width: 100% !important;',
-        '    max-width: 100vw !important;',
-        '    height: auto !important;',
-        '    max-height: 55vh !important;',
-        '    border-radius: 16px 16px 0 0 !important;',
-        '    border: 1px solid rgba(0,255,255,0.25) !important;',
-        '    border-bottom: none !important;',
-        '    box-shadow: 0 -8px 30px rgba(0,0,0,0.6) !important;',
-        '    transform: translateY(0) !important;',
-        '    opacity: 1 !important;',
-        '    pointer-events: auto !important;',
-        '    z-index: 200 !important;',
-        '    transition: transform 0.3s ease, max-height 0.3s ease !important;',
-        '    display: flex !important;',
-        '    flex-direction: column !important;',
-        '    padding-bottom: 12px !important;',
+        '    top: auto !important; left: 0 !important; right: 0 !important; bottom: 0 !important;',
+        '    width: 100% !important; max-width: 100vw !important; max-height: 55vh !important;',
+        '    border-radius: 16px 16px 0 0 !important; border-bottom: none !important;',
+        '    transform: translateY(0) !important; opacity: 1 !important; pointer-events: auto !important;',
+        '    z-index: 200 !important; display: flex !important; flex-direction: column !important;',
         '  }',
-
-        '  /* Colapsado: solo cabecera visible (~56px) */',
-        '  #sidebar-panel.collapsed {',
-        '    max-height: 56px !important;',
-        '    overflow: hidden !important;',
-        '    transform: translateY(0) !important;',
-        '    opacity: 1 !important;',
-        '    pointer-events: auto !important;',
-        '  }',
-
-        '  #sidebar-panel .panel-header {',
-        '    flex-shrink: 0;',
-        '    cursor: pointer;',
-        '    padding: 12px 16px !important;',
-        '  }',
-        '  #sidebar-panel .panel-content {',
-        '    overflow-y: auto !important;',
-        '    -webkit-overflow-scrolling: touch;',
-        '    flex: 1;',
-        '    max-height: none !important;',
-        '    padding-bottom: 8px;',
-        '  }',
-
-        '  #status-bar {',
-        '    bottom: 62px !important;',
-        '    z-index: 180 !important;',
-        '    font-size: 11px !important;',
-        '  }',
-        '  #sidebar-panel.collapsed ~ #status-bar,',
-        '  body:has(#sidebar-panel.collapsed) #status-bar {',
-        '    bottom: 62px !important;',
-        '  }',
+        '  #sidebar-panel.collapsed { max-height: 56px !important; overflow: hidden !important; }',
+        '  #sidebar-panel .panel-header { flex-shrink: 0; cursor: pointer; }',
+        '  #sidebar-panel .panel-content { overflow-y: auto !important; -webkit-overflow-scrolling: touch; flex: 1; }',
+        '  #status-bar { bottom: 62px !important; z-index: 180 !important; font-size: 11px !important; }',
         '}',
-
-        '@media (min-width: 901px) {',
-        '  .ad-top-banner { display: none !important; }',
-        '  #sidebar-panel { max-height: calc(100vh - 40px); }',
-        '}'
+        '@media (min-width: 901px) { .ad-top-banner { display: none !important; } }'
       ].join('\n');
       document.head.appendChild(css);
 
@@ -160,14 +114,9 @@
       var panel = document.getElementById('sidebar-panel');
       if (!panel) return;
 
-      // Móvil: empezar colapsado
-      if (window.innerWidth <= 900) {
-        panel.classList.add('collapsed');
-      }
+      if (window.innerWidth <= 900) panel.classList.add('collapsed');
 
-      function togglePanel() {
-        panel.classList.toggle('collapsed');
-      }
+      function togglePanel() { panel.classList.toggle('collapsed'); }
 
       if (btn) {
         btn.onclick = function (e) {
@@ -177,7 +126,6 @@
         };
       }
 
-      // Tocar la cabecera del panel también abre/cierra
       var header = panel.querySelector('.panel-header');
       if (header) {
         header.addEventListener('click', function () {
@@ -185,27 +133,17 @@
         });
       }
 
-      // Barra extra "Controles" si el panel está colapsado y no se nota
       if (window.innerWidth <= 900 && !document.getElementById('aura-open-controls')) {
         var openBtn = document.createElement('button');
         openBtn.id = 'aura-open-controls';
         openBtn.type = 'button';
         openBtn.textContent = '▲ Controles';
-        openBtn.style.cssText = [
-          'position:fixed', 'left:50%', 'transform:translateX(-50%)',
-          'bottom:8px', 'z-index:220',
-          'background:rgba(0,255,255,0.15)', 'border:1px solid rgba(0,255,255,0.5)',
-          'color:#00ffff', 'padding:8px 18px', 'border-radius:20px',
-          'font-size:13px', 'font-weight:700', 'font-family:system-ui,sans-serif',
-          'backdrop-filter:blur(8px)'
-        ].join(';');
+        openBtn.style.cssText = 'position:fixed;left:50%;transform:translateX(-50%);bottom:8px;z-index:220;background:rgba(0,255,255,0.15);border:1px solid rgba(0,255,255,0.5);color:#00ffff;padding:8px 18px;border-radius:20px;font-size:13px;font-weight:700;font-family:system-ui,sans-serif';
         openBtn.onclick = function () {
           panel.classList.remove('collapsed');
           openBtn.style.display = 'none';
         };
         document.body.appendChild(openBtn);
-
-        // Mostrar/ocultar según estado del panel
         var obs = new MutationObserver(function () {
           openBtn.style.display = panel.classList.contains('collapsed') ? 'block' : 'none';
         });
