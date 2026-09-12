@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Política de Privacidad – AuraStudio</title>
+  <meta name="description" content="Política de privacidad de AuraStudio 3D. Información sobre datos, cookies y publicidad.">
+  <meta name="robots" content="noindex,follow">
+  <style>
+    :root {
+      --primary: #00ffff;
+      --bg: #02040a;
+      --text: #e2f4ff;
+      --muted: #7da5c2;
+      --card: rgba(10, 20, 42, 0.75);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.65;
+      min-height: 100vh;
+    }
+    header {
+      border-bottom: 1px solid rgba(0,255,255,0.2);
+      padding: 1.2rem 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 0.8rem;
+    }
+    header a.logo {
+      color: var(--primary);
+      text-decoration: none;
+      font-weight: 700;
+      font-size: 1.15rem;
+      text-shadow: 0 0 10px rgba(0,255,255,0.4);
+    }
+    nav a {
+      color: var(--muted);
+      text-decoration: none;
+      margin-left: 1rem;
+      font-size: 0.92rem;
+    }
+    nav a:hover { color: var(--primary); }
+    .wrap {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 2rem 1.4rem 3rem;
+    }
+    h1 {
+      font-size: 1.75rem;
+      color: var(--primary);
+      margin-bottom: 0.5rem;
+    }
+    .updated {
+      color: var(--muted);
+      font-size: 0.88rem;
+      margin-bottom: 1.8rem;
+    }
+    h2 {
+      font-size: 1.15rem;
+      color: #5bb3e0;
+      margin: 1.6rem 0 0.6rem;
+    }
+    p, li { color: #c5e0f0; margin-bottom: 0.75rem; font-size: 0.98rem; }
+    ul { margin: 0.5rem 0 1rem 1.3rem; }
+    .card {
+      background: var(--card);
+      border: 1px solid rgba(0,255,255,0.15);
+      border-radius: 12px;
+      padding: 1.2rem 1.3rem;
+      margin: 1rem 0;
+    }
+    footer {
+      text-align: center;
+      padding: 1.5rem;
+      border-top: 1px solid rgba(0,255,255,0.12);
+      color: var(--muted);
+      font-size: 0.85rem;
+    }
+    footer a { color: var(--primary); text-decoration: none; }
+  </style>
+</head>
+<body>
+  <header>
+    <a class="logo" href="/">AuraStudio</a>
+    <nav>
+      <a href="/">Inicio</a>
+      <a href="/app.html">Abrir App</a>
+      <a href="/terms.html">Términos</a>
+    </nav>
+  </header>
+
+  <main class="wrap">
+    <h1>Política de Privacidad</h1>
+    <p class="updated">Última actualización: septiembre 2026</p>
+
+    <div class="card">
+      <p>
+        AuraStudio (“nosotros”, “el sitio”) es una aplicación web de visualización y
+        procesamiento de audio que se ejecuta en tu navegador. Esta política describe
+        qué información se trata al usar el servicio.
+      </p>
+    </div>
+
+    <h2>1. Datos que procesamos</h2>
+    <p>En general, <strong>no recogemos datos personales identificables</strong> de forma deliberada.</p>
+    <ul>
+      <li><strong>Audio:</strong> el micrófono o los archivos MP3 se procesan solo en tu dispositivo (Web Audio API). No se suben a nuestros servidores.</li>
+      <li><strong>Datos técnicos:</strong> el proveedor de hosting (por ejemplo Vercel) puede registrar de forma automática IP, tipo de navegador y páginas visitadas con fines de seguridad y estadísticas básicas.</li>
+      <li><strong>Publicidad:</strong> si mostramos anuncios de redes como Adsterra u otras, esas redes pueden usar cookies o identificadores para mostrar anuncios y medir impresiones. Consulta sus propias políticas.</li>
+    </ul>
+
+    <h2>2. Cookies y almacenamiento local</h2>
+    <p>
+      El sitio puede usar <code>localStorage</code> del navegador para recordar preferencias
+      simples de la interfaz. Las redes publicitarias pueden establecer cookies propias.
+      Puedes bloquear o eliminar cookies desde la configuración de tu navegador.
+    </p>
+
+    <h2>3. Finalidad</h2>
+    <p>Usamos la información técnica y de anuncios únicamente para:</p>
+    <ul>
+      <li>Hacer funcionar la aplicación y mejorar la experiencia</li>
+      <li>Mostrar publicidad y medir su rendimiento</li>
+      <li>Proteger el servicio frente a abusos</li>
+    </ul>
+
+    <h2>4. Terceros</h2>
+    <p>
+      Podemos usar servicios de terceros (hosting, CDN, redes de anuncios, analítica).
+      Cada uno trata datos según su propia política de privacidad. No vendemos listas
+      de datos personales.
+    </p>
+
+    <h2>5. Menores</h2>
+    <p>
+      El servicio no está dirigido a menores de 13 años. Si eres padre/madre o tutor y
+      crees que un menor nos ha facilitado datos, contacta con nosotros para eliminarlos.
+    </p>
+
+    <h2>6. Cambios</h2>
+    <p>
+      Podemos actualizar esta política. La fecha de “última actualización” reflejará
+      el cambio. El uso continuado del sitio implica la aceptación de la versión vigente.
+    </p>
+
+    <h2>7. Contacto</h2>
+    <p>
+      Para consultas sobre privacidad, puedes abrir un issue en el
+      <a href="https://github.com/octacorrr/aurastudio" style="color:#00ffff">repositorio de GitHub</a>
+      o usar el correo asociado a la cuenta del proyecto.
+    </p>
+  </main>
+
+  <footer>
+    <p>© 2026 AuraStudio · <a href="/">Inicio</a> · <a href="/terms.html">Términos</a> · <a href="/app.html">App</a></p>
+  </footer>
+</body>
+</html>
