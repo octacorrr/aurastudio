@@ -1,1 +1,34 @@
-PLACEHOLDER
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>AuraStudio App – Visualizador y Ecualizador 3D</title>
+  <meta name="description" content="Suite de audio 3D con ecualizador de 5 bandas, efectos y visualización WebGL.">
+  <style>
+    html, body { margin: 0; height: 100%; background: #02040a; }
+    #boot {
+      position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+      flex-direction: column; gap: 12px; color: #00ffff; font-family: system-ui, sans-serif;
+      z-index: 9999; background: #02040a;
+    }
+    #boot p { color: #7da5c2; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <div id="boot">
+    <div>AuraStudio</div>
+    <p>Cargando suite 3D…</p>
+  </div>
+  <script src="/app-loader.js"></script>
+  <script>
+    // Fallback if app-loader.js missing: show message
+    setTimeout(function(){
+      var b=document.getElementById('boot');
+      if(b && b.textContent.indexOf('Cargando')!==-1){
+        b.innerHTML='<div style="color:#ff6b6b">Actualizando…</div><p style="color:#7da5c2">Recarga en unos segundos</p>';
+      }
+    }, 8000);
+  </script>
+</body>
+</html>
