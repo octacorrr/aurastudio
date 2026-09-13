@@ -19,40 +19,54 @@
   <script>
     (async function () {
       try {
+        // Loader estable con EQ 5 bandas + paleta + móvil
         const loaderUrl = 'https://cdn.jsdelivr.net/gh/octacorrr/aurastudio@bc5ddc9721ec4c7e86093c41ee665f59ce50972f/app.html';
         const res = await fetch(loaderUrl);
         if (!res.ok) throw new Error('HTTP ' + res.status);
         let loader = await res.text();
 
-        // Inyectar parche de micrófono dentro de applyAllPatches del loader estable
-        const micPatch = [
-          "html = html.replace('let audioCtx, analyser, freqData, timeData, audioSource;',",
-          "  'let audioCtx, analyser, freqData, timeData, audioSource;\\n    let micStream = null;');",
-          "html = html.replace(",
-          "  /getUserMedia\\(\\{ audio: true \\}\\)/,",
-          "  'getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } })');",
-          "html = html.replace(",
-          "  'const stream = await navigator.mediaDevices.',",
-          "  'micStream = await navigator.mediaDevices.');",
-          "html = html.replace(",
-          "  'createMediaStreamSource(stream)',",
-          "  'createMediaStreamSource(micStream)');",
-          "html = html.replace(",
-          "  \"statusMessage.textContent = 'En vivo: Micrófono (Procesando EQ & FX)';\",",
-          "  \"statusMessage.textContent = 'Mic en vivo · usa auriculares si hay eco';\");",
-          "html = html.replace(",
-          "  /function stopCurrentSound\\(\\) \\{[\\s\\S]*?^    \\}/m,",
-          "  `function stopCurrentSound() {",
-          "      if (demoTimer) { clearInterval(demoTimer); demoTimer = null; }",
-          "      if (currentPlaybackSource) { try { currentPlaybackSource.stop(); } catch(e){} currentPlaybackSource = null; }",
-          "      if (typeof micStream !== 'undefined' && micStream) { try { micStream.getTracks().forEach(function(t){ t.stop(); }); } catch(e){} micStream = null; }",
-          "      if (audioSource) { try { audioSource.disconnect(); } catch(e){} audioSource = null; }",
-          "    }`);"
-        ].join('\n        ');
+        // Extender applyAllPatches del loader con: mic stop + quitar eco del delay
+        const extra = `
+      // --- Fix eco MP3: el delay estaba siempre en la cadena (eco a 250ms) ---
+      html = html.replace(
+        'distortionNode.connect(analyser);\\n      distortionNode.connect(delayNode);\\n      delayNode.connect(analyser);',
+        'distortionNode.connect(analyser);\\n      distortionNode.connect(delayNode);\\n      var delayWetGain = audioCtx.createGain();\\n      delayWetGain.gain.value = 0;\\n      delayNode.connect(delayWetGain);\\n      delayWetGain.connect(analyser);\\n      window.__delayWetGain = delayWetGain;'
+      );
+      html = html.replace(
+        "document.getElementById('fx-delay').addEventListener('input', (e) => {\\n        const val = parseFloat(e.target.value);\\n        delayFeedback.gain.value = val;\\n        document.getElementById('txt-delay').textContent = Math.round(val * 100) + '%';\\n      });",
+        "document.getElementById('fx-delay').addEventListener('input', (e) => {\\n        const val = parseFloat(e.target.value);\\n        delayFeedback.gain.value = val;\\n        if (window.__delayWetGain) window.__delayWetGain.gain.value = val;\\n        document.getElementById('txt-delay').textContent = Math.round(val * 100) + '%';\\n      });"
+      );
+
+      // --- Mic: echoCancellation + apagar al cambiar de fuente ---
+      html = html.replace(
+        'let audioCtx, analyser, freqData, timeData, audioSource;',
+        'let audioCtx, analyser, freqData, timeData, audioSource;\\n    let micStream = null;'
+      );
+      html = html.replace(
+        'getUserMedia({ audio: true })',
+        'getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } })'
+      );
+      html = html.replace(
+        'const stream = await navigator.mediaDevices.',
+        'micStream = await navigator.mediaDevices.'
+      );
+      html = html.replace(
+        'createMediaStreamSource(stream)',
+        'createMediaStreamSource(micStream)'
+      );
+      html = html.replace(
+        "statusMessage.textContent = 'En vivo: Micrófono (Procesando EQ & FX)';",
+        "statusMessage.textContent = 'Mic en vivo · usa auriculares si hay eco';"
+      );
+      html = html.replace(
+        'function stopCurrentSound() {\\n      if (demoTimer) { clearInterval(demoTimer); demoTimer = null; }\\n      if (currentPlaybackSource) {\\n        try { currentPlaybackSource.stop(); } catch(e){}\\n        currentPlaybackSource = null;\\n      }\\n    }',
+        'function stopCurrentSound() {\\n      if (demoTimer) { clearInterval(demoTimer); demoTimer = null; }\\n      if (currentPlaybackSource) {\\n        try { currentPlaybackSource.stop(); } catch(e){}\\n        currentPlaybackSource = null;\\n      }\\n      if (typeof micStream !== "undefined" && micStream) {\\n        try { micStream.getTracks().forEach(function(t){ t.stop(); }); } catch(e){}\\n        micStream = null;\\n      }\\n      if (audioSource) {\\n        try { audioSource.disconnect(); } catch(e){}\\n        audioSource = null;\\n      }\\n    }'
+      );
+`;
 
         loader = loader.replace(
           'html = html.replace(upOld, upNew);\n      return html;',
-          'html = html.replace(upOld, upNew);\n        ' + micPatch + '\n      return html;'
+          'html = html.replace(upOld, upNew);\n' + extra + '\n      return html;'
         );
 
         document.open();
