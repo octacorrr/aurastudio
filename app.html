@@ -25,7 +25,6 @@
         let loader = await res.text();
 
         const extra = `
-      // Mic + delay eco fixes
       html = html.replace(
         'distortionNode.connect(analyser);\\n      distortionNode.connect(delayNode);\\n      delayNode.connect(analyser);',
         'distortionNode.connect(analyser);\\n      distortionNode.connect(delayNode);\\n      var delayWetGain = audioCtx.createGain();\\n      delayWetGain.gain.value = 0;\\n      delayNode.connect(delayWetGain);\\n      delayWetGain.connect(analyser);\\n      window.__delayWetGain = delayWetGain;'
@@ -53,152 +52,13 @@
         'function stopCurrentSound() {\\n      if (demoTimer) { clearInterval(demoTimer); demoTimer = null; }\\n      if (currentPlaybackSource) {\\n        try { currentPlaybackSource.stop(); } catch(e){}\\n        currentPlaybackSource = null;\\n      }\\n      if (typeof micStream !== "undefined" && micStream) {\\n        try { micStream.getTracks().forEach(function(t){ t.stop(); }); } catch(e){}\\n        micStream = null;\\n      }\\n      if (audioSource) {\\n        try { audioSource.disconnect(); } catch(e){}\\n        audioSource = null;\\n      }\\n    }'
       );
 
-      // Exponer renderer para captura
       html = html.replace(
         'composer.addPass(bloomPass);',
-        'composer.addPass(bloomPass); window.__auraRenderer=renderer; window.__auraComposer=composer; window.__auraBloom=bloomPass;'
+        'composer.addPass(bloomPass); window.__auraRenderer=renderer; window.__auraComposer=composer; window.__auraBloom=bloomPass; window.__auraCamera=camera; window.__auraControls=controls; window.__auraScene=scene;'
       );
 
-      // Galería de capturas
-      html = html.replace('</body>', \
-\`<!-- Aura Gallery -->
-<style>
-#aura-gal-btn{position:fixed;bottom:70px;right:12px;z-index:280;background:rgba(0,255,255,0.15);border:1px solid rgba(0,255,255,0.5);color:#0ff;padding:10px 14px;border-radius:22px;font-size:13px;font-weight:700;font-family:system-ui,sans-serif;cursor:pointer;backdrop-filter:blur(8px)}
-#aura-gal-panel{display:none;position:fixed;inset:auto 0 0 0;max-height:55vh;z-index:290;background:rgba(4,10,22,0.96);border-top:1px solid rgba(0,255,255,0.3);padding:12px;font-family:system-ui,sans-serif;color:#e2f4ff;overflow:auto}
-#aura-gal-panel.open{display:block}
-#aura-gal-panel h3{margin:0 0 8px;color:#0ff;font-size:14px}
-#aura-gal-opts{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;font-size:11px;color:#7da5c2;align-items:center}
-#aura-gal-opts label{display:flex;align-items:center;gap:4px}
-#aura-gal-opts select,#aura-gal-opts input{background:#0a1628;border:1px solid rgba(0,255,255,0.3);color:#0ff;border-radius:6px;padding:4px 6px;font-size:11px}
-#aura-gal-actions{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap}
-#aura-gal-actions button{background:rgba(0,255,255,0.12);border:1px solid rgba(0,255,255,0.4);color:#0ff;padding:8px 12px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer}
-#aura-gal-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:8px}
-.aura-gal-item{position:relative;border-radius:8px;overflow:hidden;border:1px solid rgba(0,255,255,0.2);background:#02040a}
-.aura-gal-item img{width:100%;display:block;aspect-ratio:16/10;object-fit:cover}
-.aura-gal-item .row{display:flex;gap:4px;padding:4px}
-.aura-gal-item .row button{flex:1;font-size:10px;padding:4px;border:none;border-radius:4px;cursor:pointer;background:#0a2030;color:#0ff}
-#aura-gal-close{float:right;background:transparent;border:none;color:#7da5c2;font-size:18px;cursor:pointer}
-</style>
-<button type="button" id="aura-gal-btn" title="Galería">📷 Galería</button>
-<div id="aura-gal-panel">
-  <button type="button" id="aura-gal-close" aria-label="Cerrar">×</button>
-  <h3>Galería de capturas</h3>
-  <div id="aura-gal-opts">
-    <label>Formato
-      <select id="aura-cap-fmt"><option value="png">PNG</option><option value="jpeg">JPEG</option></select>
-    </label>
-    <label>Calidad JPEG
-      <input id="aura-cap-q" type="range" min="0.5" max="1" step="0.05" value="0.92">
-    </label>
-    <label>Resolución
-      <select id="aura-cap-scale"><option value="1">1× pantalla</option><option value="2">2× (más nítido)</option></select>
-    </label>
-    <label><input type="checkbox" id="aura-cap-hideui" checked> Ocultar UI al capturar</label>
-  </div>
-  <div id="aura-gal-actions">
-    <button type="button" id="aura-cap-shot">📸 Capturar ahora</button>
-    <button type="button" id="aura-cap-clear">🗑️ Vaciar</button>
-  </div>
-  <div id="aura-gal-grid"></div>
-  <p style="font-size:10px;color:#7da5c2;margin:8px 0 0">Consejo: sube un poco el bloom y elige una forma llamativa antes de capturar. 2× tarda un instante más.</p>
-</div>
-<script>
-(function(){
-  var shots = [];
-  var btn = document.getElementById('aura-gal-btn');
-  var panel = document.getElementById('aura-gal-panel');
-  var grid = document.getElementById('aura-gal-grid');
-  if (!btn || !panel) return;
-  btn.onclick = function(){ panel.classList.toggle('open'); };
-  document.getElementById('aura-gal-close').onclick = function(){ panel.classList.remove('open'); };
-
-  function hideChrome(hide){
-    var ids = ['sidebar-panel','nav-tabs','toggle-panel-btn','status-bar','home-link','aura-gal-btn','aura-open-controls'];
-    ids.forEach(function(id){
-      var el = document.getElementById(id);
-      if (el) el.style.visibility = hide ? 'hidden' : '';
-    });
-  }
-
-  function capture(){
-    var renderer = window.__auraRenderer;
-    var composer = window.__auraComposer;
-    if (!renderer) { alert('Espera a que cargue el visualizador'); return; }
-    var scale = parseFloat(document.getElementById('aura-cap-scale').value) || 1;
-    var fmt = document.getElementById('aura-cap-fmt').value;
-    var q = parseFloat(document.getElementById('aura-cap-q').value) || 0.92;
-    var hideUi = document.getElementById('aura-cap-hideui').checked;
-    var w = window.innerWidth, h = window.innerHeight;
-
-    if (hideUi) hideChrome(true);
-
-    function doShot(){
-      try {
-        if (scale > 1) {
-          renderer.setPixelRatio(1);
-          renderer.setSize(w * scale, h * scale, false);
-          if (composer && composer.setSize) composer.setSize(w * scale, h * scale);
-        }
-        if (composer) composer.render();
-        else renderer.render(window.__auraScene, window.__auraCamera);
-        var mime = fmt === 'jpeg' ? 'image/jpeg' : 'image/png';
-        var data = renderer.domElement.toDataURL(mime, q);
-        shots.unshift({ data: data, t: Date.now(), mime: mime });
-        if (shots.length > 24) shots.pop();
-        renderGrid();
-      } catch (err) {
-        alert('No se pudo capturar: ' + err.message);
-      } finally {
-        if (scale > 1) {
-          renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-          renderer.setSize(w, h, false);
-          if (composer && composer.setSize) composer.setSize(w, h);
-        }
-        if (hideUi) hideChrome(false);
-        if (composer) composer.render();
-      }
-    }
-    // 2 frames para que el UI se oculte
-    requestAnimationFrame(function(){ requestAnimationFrame(doShot); });
-  }
-
-  function renderGrid(){
-    grid.innerHTML = '';
-    shots.forEach(function(s, i){
-      var div = document.createElement('div');
-      div.className = 'aura-gal-item';
-      var img = document.createElement('img');
-      img.src = s.data;
-      img.alt = 'Captura ' + (i+1);
-      var row = document.createElement('div');
-      row.className = 'row';
-      var dl = document.createElement('button');
-      dl.type = 'button';
-      dl.textContent = '⬇️';
-      dl.onclick = function(){
-        var a = document.createElement('a');
-        var ext = s.mime.indexOf('jpeg') >= 0 ? 'jpg' : 'png';
-        a.download = 'aurastudio-' + s.t + '.' + ext;
-        a.href = s.data;
-        a.click();
-      };
-      var rm = document.createElement('button');
-      rm.type = 'button';
-      rm.textContent = '✕';
-      rm.onclick = function(){ shots.splice(i,1); renderGrid(); };
-      row.appendChild(dl);
-      row.appendChild(rm);
-      div.appendChild(img);
-      div.appendChild(row);
-      grid.appendChild(div);
-    });
-  }
-
-  document.getElementById('aura-cap-shot').onclick = capture;
-  document.getElementById('aura-cap-clear').onclick = function(){ shots = []; renderGrid(); };
-})();
-</script>
-\` + '</body>');
+      html = html.replace('</body>',
+        '<script src="/gallery.js"><\/script></body>');
 `;
 
         loader = loader.replace(
