@@ -1,1 +1,288 @@
-PLACEHOLDER_WILL_REPLACE
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>AuraStudio App – Visualizador y Ecualizador 3D</title>
+  <meta name="description" content="Suite de audio 3D con ecualizador de 5 bandas, efectos y visualización WebGL.">
+  <style>
+    html, body { margin: 0; height: 100%; background: #02040a; }
+    #boot {
+      position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
+      flex-direction: column; gap: 12px; color: #00ffff; font-family: system-ui, sans-serif;
+      z-index: 9999; background: #02040a;
+    }
+    #boot p { color: #7da5c2; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <div id="boot">
+    <div>AuraStudio</div>
+    <p>Cargando suite 3D…</p>
+  </div>
+  <script>
+    (async function () {
+      const url = 'https://cdn.jsdelivr.net/gh/octacorrr/aurastudio@f046ed409636ecf6f86633a23daa7112c928cd10/index.html';
+      try {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        let html = await res.text();
+        html = applyAllPatches(html);
+        document.open();
+        document.write(html);
+        document.close();
+        setTimeout(function () {
+          injectMobileLayoutFix();
+          injectHomeLink();
+          injectSocialBar();
+          try {
+            var sel = document.getElementById('palette-select');
+            if (sel) sel.dispatchEvent(new Event('change'));
+          } catch (e) {}
+        }, 500);
+      } catch (e) {
+        var boot = document.getElementById('boot');
+        if (boot) {
+          boot.innerHTML =
+            '<div style="color:#ff6b6b">No se pudo cargar la app</div>' +
+            '<p style="color:#7da5c2;max-width:360px;text-align:center">' + (e && e.message ? e.message : e) +
+            '</p><p><a href="/" style="color:#00ffff">Volver al inicio</a></p>';
+        }
+      }
+    })();
+
+    function applyAllPatches(html) {
+      html = html.replace(
+        "document.getElementById('palette-select').addEventListener('change', (e) => {\n        currentPalette = e.target.value;\n      });",
+        "document.getElementById('palette-select').addEventListener('change', (e) => {\n        currentPalette = e.target.value;\n        applyShapePalette();\n      });\n\n    function applyShapePalette() {\n      const map = {\n        cyberpunk: { terrain: 0x00ffff, crystal: 0xff007f, hue: 0.55 },\n        emerald:   { terrain: 0x00ff66, crystal: 0x39ff14, hue: 0.35 },\n        solar:     { terrain: 0xff6600, crystal: 0xffaa00, hue: 0.08 },\n        violet:    { terrain: 0x9944ff, crystal: 0xcc66ff, hue: 0.75 }\n      };\n      const p = map[currentPalette] || map.cyberpunk;\n      if (terrainMesh && terrainMesh.material) terrainMesh.material.color.setHex(p.terrain);\n      if (crystalMesh && crystalMesh.material) crystalMesh.material.color.setHex(p.crystal);\n      window.__auraPaletteHue = p.hue;\n    }\n    window.__auraPaletteHue = 0.55;"
+      );
+      html = html.replace(
+        'bar.material.color.setHSL(0.55 + val * 0.4, 1.0, 0.5);',
+        'bar.material.color.setHSL((window.__auraPaletteHue || 0.55) + val * 0.25, 1.0, 0.45 + val * 0.2);'
+      );
+
+      const eqOld = `      <div id="tab-eq" class="module-view">
+        <div class="card">
+          <div class="section-title">Ecualizador Multibanda en Tiempo Real</div>
+          
+          <div class="slider-group">
+            <div class="slider-labels">
+              <span>Graves / Sub-Bass (< 200 Hz)</span>
+              <span id="txt-bass">0 dB</span>
+            </div>
+            <input type="range" id="eq-bass" min="-24" max="24" step="1" value="0">
+          </div>
+
+          <div class="slider-group">
+            <div class="slider-labels">
+              <span>Medios / Voces (1.5 kHz)</span>
+              <span id="txt-mid">0 dB</span>
+            </div>
+            <input type="range" id="eq-mid" min="-24" max="24" step="1" value="0">
+          </div>
+
+          <div class="slider-group">
+            <div class="slider-labels">
+              <span>Agudos / Brillo (> 5 kHz)</span>
+              <span id="txt-treble">0 dB</span>
+            </div>
+            <input type="range" id="eq-treble" min="-24" max="24" step="1" value="0">
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="section-title">Aislador Rápido de Frecuencias</div>
+          <div class="btn-grid">
+            <button id="btn-isolate-bass">🔊 Resaltar Graves</button>
+            <button id="btn-isolate-vocals">🎤 Resaltar Voces</button>
+            <button id="btn-reset-eq" style="grid-column: span 2;">🔄 Restablecer EQ</button>
+          </div>
+        </div>
+      </div>`;
+
+      const eqNew = `      <div id="tab-eq" class="module-view">
+        <div class="card">
+          <div class="section-title">Ecualizador de 5 Bandas</div>
+          <p style="font-size:10px;color:#7da5c2;margin:0 0 8px;line-height:1.4;">
+            Cada banda controla un rango de frecuencias. 0 dB = neutro. Positivo refuerza; negativo atenúa.
+          </p>
+          <div class="slider-group">
+            <div class="slider-labels"><span>1. Sub-bass (~60 Hz)</span><span id="txt-eq1">0 dB</span></div>
+            <input type="range" id="eq-1" min="-24" max="24" step="1" value="0">
+            <p style="font-size:9px;color:#5bb3e0;margin:2px 0 0;">Patada profunda, sub del kick y el bajo más grave.</p>
+          </div>
+          <div class="slider-group">
+            <div class="slider-labels"><span>2. Bass (~250 Hz)</span><span id="txt-eq2">0 dB</span></div>
+            <input type="range" id="eq-2" min="-24" max="24" step="1" value="0">
+            <p style="font-size:9px;color:#5bb3e0;margin:2px 0 0;">Cuerpo del bajo y punch del kick.</p>
+          </div>
+          <div class="slider-group">
+            <div class="slider-labels"><span>3. Low-mid (~800 Hz)</span><span id="txt-eq3">0 dB</span></div>
+            <input type="range" id="eq-3" min="-24" max="24" step="1" value="0">
+            <p style="font-size:9px;color:#5bb3e0;margin:2px 0 0;">Calidez; exceso puede sonar emborronado.</p>
+          </div>
+          <div class="slider-group">
+            <div class="slider-labels"><span>4. High-mid (~3 kHz)</span><span id="txt-eq4">0 dB</span></div>
+            <input type="range" id="eq-4" min="-24" max="24" step="1" value="0">
+            <p style="font-size:9px;color:#5bb3e0;margin:2px 0 0;">Presencia de voces e instrumentos principales.</p>
+          </div>
+          <div class="slider-group">
+            <div class="slider-labels"><span>5. Treble (~10 kHz)</span><span id="txt-eq5">0 dB</span></div>
+            <input type="range" id="eq-5" min="-24" max="24" step="1" value="0">
+            <p style="font-size:9px;color:#5bb3e0;margin:2px 0 0;">Aire, brillo y detalle (hi-hats, sibilancia).</p>
+          </div>
+        </div>
+        <div class="card">
+          <div class="section-title">Aislador Rápido</div>
+          <div class="btn-grid">
+            <button id="btn-isolate-bass">🔊 Resaltar Graves</button>
+            <button id="btn-isolate-vocals">🎤 Resaltar Voces</button>
+            <button id="btn-reset-eq" style="grid-column: span 2;">🔄 Restablecer EQ</button>
+          </div>
+        </div>
+      </div>`;
+
+      html = html.replace(eqOld, eqNew);
+
+      html = html.replace(
+        'let eqBassNode, eqMidNode, eqTrebleNode;',
+        'let eqBassNode, eqMidNode, eqTrebleNode;\n    let eqNodes = [];'
+      );
+
+      const nodesOld = `      // --- Nodos de Ecualización (Fase 2) ---\n      eqBassNode = audioCtx.createBiquadFilter();\n      eqBassNode.type = 'lowshelf';\n      eqBassNode.frequency.value = 200;\n      eqBassNode.gain.value = 0;\n\n      eqMidNode = audioCtx.createBiquadFilter();\n      eqMidNode.type = 'peaking';\n      eqMidNode.frequency.value = 1500;\n      eqMidNode.Q.value = 1.0;\n      eqMidNode.gain.value = 0;\n\n      eqTrebleNode = audioCtx.createBiquadFilter();\n      eqTrebleNode.type = 'highshelf';\n      eqTrebleNode.frequency.value = 5000;\n      eqTrebleNode.gain.value = 0;`;
+
+      const nodesNew = `      // --- Nodos de Ecualización 5 bandas ---\n      const eqBandDefs = [\n        { type: 'lowshelf', freq: 60, Q: 1.0 },\n        { type: 'peaking', freq: 250, Q: 1.0 },\n        { type: 'peaking', freq: 800, Q: 1.0 },\n        { type: 'peaking', freq: 3000, Q: 1.0 },\n        { type: 'highshelf', freq: 10000, Q: 1.0 }\n      ];\n      eqNodes = eqBandDefs.map(function(def) {\n        const n = audioCtx.createBiquadFilter();\n        n.type = def.type;\n        n.frequency.value = def.freq;\n        n.Q.value = def.Q;\n        n.gain.value = 0;\n        return n;\n      });\n      eqBassNode = eqNodes[0];\n      eqMidNode = eqNodes[3];\n      eqTrebleNode = eqNodes[4];`;
+
+      html = html.replace(nodesOld, nodesNew);
+
+      const chainOld = `      // Conexión en Serie de la Cadena de Procesamiento:\n      // Entrada -> EQ Bass -> EQ Mid -> EQ Treble -> Distorsión -> Analizador -> Master -> Altavoces\n      //                                          \\-> Delay Node ---/\n      eqBassNode.connect(eqMidNode);\n      eqMidNode.connect(eqTrebleNode);\n      eqTrebleNode.connect(distortionNode);`;
+
+      const chainNew = `      // Cadena: Entrada -> EQ1..EQ5 -> Distorsión\n      for (let i = 0; i < eqNodes.length - 1; i++) eqNodes[i].connect(eqNodes[i + 1]);\n      eqNodes[eqNodes.length - 1].connect(distortionNode);`;
+
+      html = html.replace(chainOld, chainNew);
+
+      const evOld = `      document.getElementById('eq-bass').addEventListener('input', (e) => {\n        eqBassNode.gain.value = parseFloat(e.target.value);\n        document.getElementById('txt-bass').textContent = e.target.value + ' dB';\n      });\n      document.getElementById('eq-mid').addEventListener('input', (e) => {\n        eqMidNode.gain.value = parseFloat(e.target.value);\n        document.getElementById('txt-mid').textContent = e.target.value + ' dB';\n      });\n      document.getElementById('eq-treble').addEventListener('input', (e) => {\n        eqTrebleNode.gain.value = parseFloat(e.target.value);\n        document.getElementById('txt-treble').textContent = e.target.value + ' dB';\n      });\n      document.getElementById('btn-isolate-bass').addEventListener('click', () => {\n        eqBassNode.gain.value = 18;\n        eqMidNode.gain.value = -20;\n        eqTrebleNode.gain.value = -24;\n        updateEqSliders();\n      });\n      document.getElementById('btn-isolate-vocals').addEventListener('click', () => {\n        eqBassNode.gain.value = -18;\n        eqMidNode.gain.value = 16;\n        eqTrebleNode.gain.value = -10;\n        updateEqSliders();\n      });\n      document.getElementById('btn-reset-eq').addEventListener('click', () => {\n        eqBassNode.gain.value = 0;\n        eqMidNode.gain.value = 0;\n        eqTrebleNode.gain.value = 0;\n        updateEqSliders();\n      });`;
+
+      const evNew = `      for (let i = 1; i <= 5; i++) {\n        (function(band) {\n          const el = document.getElementById('eq-' + band);\n          if (!el) return;\n          el.addEventListener('input', (e) => {\n            const v = parseFloat(e.target.value);\n            if (eqNodes[band - 1]) eqNodes[band - 1].gain.value = v;\n            const t = document.getElementById('txt-eq' + band);\n            if (t) t.textContent = v + ' dB';\n          });\n        })(i);\n      }\n      document.getElementById('btn-isolate-bass').addEventListener('click', () => {\n        [18, 12, -12, -18, -20].forEach((val, i) => { if (eqNodes[i]) eqNodes[i].gain.value = val; });\n        updateEqSliders();\n      });\n      document.getElementById('btn-isolate-vocals').addEventListener('click', () => {\n        [-16, -12, -4, 14, -6].forEach((val, i) => { if (eqNodes[i]) eqNodes[i].gain.value = val; });\n        updateEqSliders();\n      });\n      document.getElementById('btn-reset-eq').addEventListener('click', () => {\n        eqNodes.forEach(n => { n.gain.value = 0; });\n        updateEqSliders();\n      });`;
+
+      html = html.replace(evOld, evNew);
+
+      const upOld = `    function updateEqSliders() {\n      document.getElementById('eq-bass').value = eqBassNode.gain.value;\n      document.getElementById('txt-bass').textContent = eqBassNode.gain.value + ' dB';\n      document.getElementById('eq-mid').value = eqMidNode.gain.value;\n      document.getElementById('txt-mid').textContent = eqMidNode.gain.value + ' dB';\n      document.getElementById('eq-treble').value = eqTrebleNode.gain.value;\n      document.getElementById('txt-treble').textContent = eqTrebleNode.gain.value + ' dB';\n    }`;
+
+      const upNew = `    function updateEqSliders() {\n      if (!eqNodes || !eqNodes.length) return;\n      for (let i = 0; i < eqNodes.length; i++) {\n        const band = i + 1;\n        const el = document.getElementById('eq-' + band);\n        const t = document.getElementById('txt-eq' + band);\n        if (el) el.value = eqNodes[i].gain.value;\n        if (t) t.textContent = eqNodes[i].gain.value + ' dB';\n      }\n    }`;
+
+      html = html.replace(upOld, upNew);
+
+      // --- Extra patches: delay wet, mic hardening, gallery hooks ---
+      html = html.replace(
+        'distortionNode.connect(analyser);\n      distortionNode.connect(delayNode);\n      delayNode.connect(analyser);',
+        'distortionNode.connect(analyser);\n      distortionNode.connect(delayNode);\n      var delayWetGain = audioCtx.createGain();\n      delayWetGain.gain.value = 0;\n      delayNode.connect(delayWetGain);\n      delayWetGain.connect(analyser);\n      window.__delayWetGain = delayWetGain;'
+      );
+      html = html.replace(
+        "document.getElementById('fx-delay').addEventListener('input', (e) => {\n        const val = parseFloat(e.target.value);\n        delayFeedback.gain.value = val;\n        if (window.__delayWetGain) window.__delayWetGain.gain.value = val;\n        document.getElementById('txt-delay').textContent = Math.round(val * 100) + '%';\n      });",
+        "document.getElementById('fx-delay').addEventListener('input', (e) => {\n        const val = parseFloat(e.target.value);\n        delayFeedback.gain.value = val;\n        if (window.__delayWetGain) window.__delayWetGain.gain.value = val;\n        document.getElementById('txt-delay').textContent = Math.round(val * 100) + '%';\n      });"
+      );
+      html = html.replace(
+        'let audioCtx, analyser, freqData, timeData, audioSource;',
+        'let audioCtx, analyser, freqData, timeData, audioSource;\n    let micStream = null;'
+      );
+      html = html.replace(
+        'getUserMedia({ audio: true })',
+        'getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } })'
+      );
+      html = html.replace(
+        'const stream = await navigator.mediaDevices.',
+        'micStream = await navigator.mediaDevices.'
+      );
+      html = html.replace(
+        'createMediaStreamSource(stream)',
+        'createMediaStreamSource(micStream)'
+      );
+      html = html.replace(
+        "statusMessage.textContent = 'En vivo: Micrófono (Procesando EQ & FX)';",
+        "statusMessage.textContent = 'Mic en vivo · usa auriculares si hay eco';"
+      );
+      html = html.replace(
+        'function stopCurrentSound() {\n      if (demoTimer) { clearInterval(demoTimer); demoTimer = null; }\n      if (currentPlaybackSource) {\n        try { currentPlaybackSource.stop(); } catch(e){}\n        currentPlaybackSource = null;\n      }\n    }',
+        'function stopCurrentSound() {\n      if (demoTimer) { clearInterval(demoTimer); demoTimer = null; }\n      if (currentPlaybackSource) {\n        try { currentPlaybackSource.stop(); } catch(e){}\n        currentPlaybackSource = null;\n      }\n      if (typeof micStream !== "undefined" && micStream) {\n        try { micStream.getTracks().forEach(function(t){ t.stop(); }); } catch(e){}\n        micStream = null;\n      }\n      if (audioSource) {\n        try { audioSource.disconnect(); } catch(e){}\n        audioSource = null;\n      }\n    }'
+      );
+      html = html.replace(
+        'composer.addPass(bloomPass);',
+        'composer.addPass(bloomPass); window.__auraRenderer=renderer; window.__auraComposer=composer; window.__auraBloom=bloomPass; window.__auraCamera=camera; window.__auraControls=controls; window.__auraScene=scene;'
+      );
+      html = html.replace(
+        '</body>',
+        '<script src="/gallery.js"><\/script></body>'
+      );
+
+      return html;
+    }
+
+    function injectHomeLink() {
+      if (document.getElementById('home-link')) return;
+      var a = document.createElement('a');
+      a.href = '/';
+      a.id = 'home-link';
+      a.textContent = '← Inicio';
+      a.style.cssText = 'position:fixed;top:10px;right:10px;z-index:300;background:rgba(6,14,30,0.95);border:1px solid rgba(0,255,255,0.4);color:#00ffff;padding:8px 12px;border-radius:20px;font-size:12px;font-weight:600;text-decoration:none;font-family:system-ui,sans-serif';
+      document.body.appendChild(a);
+    }
+
+    function injectSocialBar() {
+      if (document.getElementById('adsterra-social-bar')) return;
+      var s = document.createElement('script');
+      s.id = 'adsterra-social-bar';
+      s.src = 'https://pl31300605.profitableratecpmnetwork.com/ea/75/22/ea75223d2edf933c49d42315bebafd78.js';
+      document.body.appendChild(s);
+    }
+
+    function injectMobileLayoutFix() {
+      if (document.getElementById('aura-mobile-fix')) return;
+      var css = document.createElement('style');
+      css.id = 'aura-mobile-fix';
+      css.textContent = [
+        '@media (max-width: 900px) {',
+        '  #nav-tabs { top: 10px !important; left: 50% !important; transform: translateX(-50%) !important; max-width: calc(100vw - 100px); z-index: 250 !important; }',
+        '  #nav-tabs .tab-btn { padding: 6px 10px !important; font-size: 11px !important; }',
+        '  #toggle-panel-btn { top: 10px !important; left: 10px !important; bottom: auto !important; z-index: 260 !important; width: 42px !important; height: 42px !important; }',
+        '  #sidebar-panel { top: auto !important; left: 0 !important; right: 0 !important; bottom: 0 !important; width: 100% !important; max-width: 100vw !important; max-height: 55vh !important; border-radius: 16px 16px 0 0 !important; border-bottom: none !important; transform: translateY(0) !important; opacity: 1 !important; pointer-events: auto !important; z-index: 200 !important; display: flex !important; flex-direction: column !important; }',
+        '  #sidebar-panel.collapsed { max-height: 56px !important; overflow: hidden !important; }',
+        '  #sidebar-panel .panel-header { flex-shrink: 0; cursor: pointer; }',
+        '  #sidebar-panel .panel-content { overflow-y: auto !important; -webkit-overflow-scrolling: touch; flex: 1; }',
+        '  #status-bar { bottom: 62px !important; z-index: 180 !important; font-size: 11px !important; }',
+        '}',
+        '@media (max-width: 900px) { .ad-top-banner { max-width: 96vw !important; height: auto !important; min-height: 50px; } }'
+      ].join('\n');
+      document.head.appendChild(css);
+
+      var btn = document.getElementById('toggle-panel-btn');
+      var panel = document.getElementById('sidebar-panel');
+      if (!panel) return;
+      if (window.innerWidth <= 900) panel.classList.add('collapsed');
+      function togglePanel() { panel.classList.toggle('collapsed'); }
+      if (btn) {
+        btn.onclick = function (e) { e.preventDefault(); e.stopPropagation(); togglePanel(); };
+      }
+      var header = panel.querySelector('.panel-header');
+      if (header) {
+        header.addEventListener('click', function () {
+          if (window.innerWidth <= 900) togglePanel();
+        });
+      }
+      if (window.innerWidth <= 900 && !document.getElementById('aura-open-controls')) {
+        var openBtn = document.createElement('button');
+        openBtn.id = 'aura-open-controls';
+        openBtn.type = 'button';
+        openBtn.textContent = '▲ Controles';
+        openBtn.style.cssText = 'position:fixed;left:50%;transform:translateX(-50%);bottom:8px;z-index:220;background:rgba(0,255,255,0.15);border:1px solid rgba(0,255,255,0.5);color:#00ffff;padding:8px 18px;border-radius:20px;font-size:13px;font-weight:700;font-family:system-ui,sans-serif';
+        openBtn.onclick = function () { panel.classList.remove('collapsed'); openBtn.style.display = 'none'; };
+        document.body.appendChild(openBtn);
+        var obs = new MutationObserver(function () {
+          openBtn.style.display = panel.classList.contains('collapsed') ? 'block' : 'none';
+        });
+        obs.observe(panel, { attributes: true, attributeFilter: ['class'] });
+      }
+    }
+  </script>
+</body>
+</html>
